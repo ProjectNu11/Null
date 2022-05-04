@@ -1,3 +1,7 @@
+"""
+module
+模块文件夹，可在该文件夹下放置支持的 Saya 插件，将在启动时自动加载
+"""
 import os
 import pathlib
 

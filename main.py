@@ -22,15 +22,15 @@ class SessionConfig(BaseModel):
 
 
 if __name__ == """__main__""":
-    ariadne = Ariadne(MiraiSession(**SessionConfig(**config.dict()).dict()))
+    ariadne = Ariadne(MiraiSession(**SessionConfig(**config.dict()["essential"]).dict()))
     saya = ariadne.create(Saya)
-    con = ariadne.create(Console)
+    # con = ariadne.create(Console)
     ariadne.create(GraiaScheduler)
     ariadne.create(Commander)
     saya.install_behaviours(
         ariadne.create(BroadcastBehaviour),
         ariadne.create(GraiaSchedulerBehaviour),
-        ariadne.create(ConsoleBehaviour),
+        # ariadne.create(ConsoleBehaviour),
         ariadne.create(CommanderBehaviour),
     )
     with saya.module_context():
