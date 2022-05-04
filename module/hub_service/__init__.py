@@ -1,7 +1,3 @@
-"""
-Hub Service
-中心服务
-"""
 import json
 from datetime import datetime
 

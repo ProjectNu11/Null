@@ -1,6 +1,4 @@
 from graia.ariadne.app import Ariadne
-from graia.ariadne.console import Console
-from graia.ariadne.console.saya import ConsoleBehaviour
 from graia.ariadne.message.commander import Commander
 from graia.ariadne.message.commander.saya import CommanderBehaviour
 from graia.ariadne.model import MiraiSession
@@ -24,13 +22,11 @@ class SessionConfig(BaseModel):
 if __name__ == """__main__""":
     ariadne = Ariadne(MiraiSession(**SessionConfig(**config.dict()["essential"]).dict()))
     saya = ariadne.create(Saya)
-    # con = ariadne.create(Console)
     ariadne.create(GraiaScheduler)
     ariadne.create(Commander)
     saya.install_behaviours(
         ariadne.create(BroadcastBehaviour),
         ariadne.create(GraiaSchedulerBehaviour),
-        # ariadne.create(ConsoleBehaviour),
         ariadne.create(CommanderBehaviour),
     )
     with saya.module_context():
