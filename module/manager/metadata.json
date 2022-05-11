@@ -1,0 +1,12 @@
+{
+    "name": "插件管理器",
+    "pack": "module.manager",
+    "version": "0.0",
+    "author": [
+        "nullqwertyuiop"
+    ],
+    "pypi": false,
+    "category": "utility",
+    "description": "",
+    "dependency": null
+}
