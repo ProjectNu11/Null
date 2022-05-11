@@ -5,6 +5,7 @@ from graia.saya import Saya
 from graia.saya.builtins.broadcast import BroadcastBehaviour
 from graia.scheduler import GraiaScheduler
 from graia.scheduler.saya.behaviour import GraiaSchedulerBehaviour
+from loguru import logger
 
 import module
 from library.config import config
@@ -21,5 +22,9 @@ if __name__ == """__main__""":
     )
     with saya.module_context():
         for mod in module.__all__:
-            saya.require(mod.pack)
+            try:
+                saya.require(mod.pack)
+                mod.installed = True
+            except Exception as e:
+                logger.error(e)
     ariadne.launch_blocking()
