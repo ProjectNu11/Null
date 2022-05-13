@@ -1,6 +1,6 @@
 {
-    "name": "插件管理器",
-    "pack": "module.manager",
+    "name": "中心服务",
+    "pack": "module.hub_service",
     "version": "0.0",
     "author": [
         "nullqwertyuiop"

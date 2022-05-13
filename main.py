@@ -1,5 +1,4 @@
 from graia.ariadne.app import Ariadne
-
 from graia.ariadne.model import MiraiSession
 from graia.saya import Saya
 from graia.saya.builtins.broadcast import BroadcastBehaviour
