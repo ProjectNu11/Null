@@ -29,10 +29,11 @@ class HubService:
                 url=config.hub.url + config.hub.metadata.authorize,
                 data={"username": config.account, "password": config.hub.secret},
             ) as resp:
-                self.__auth__ = {
-                    "Authorization": f"Bearer {resp.json()['access_token']}"
-                }
-                self.__initialized__ = True
+                if resp.status_code == 200:
+                    self.__auth__ = {
+                        "Authorization": f"Bearer {resp.json()['access_token']}"
+                    }
+                    self.__initialized__ = True
 
     @staticmethod
     async def update_metadata():

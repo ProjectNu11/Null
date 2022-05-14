@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from graia.ariadne import Ariadne
-from graia.ariadne.event.message import GroupMessage, FriendMessage
+from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEvent
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain, ForwardNode, Forward
 from graia.ariadne.message.parser.twilight import (
@@ -16,12 +16,13 @@ from graia.ariadne.message.parser.twilight import (
     MatchResult,
     ArgumentMatch,
     ArgResult,
+    WildcardMatch,
 )
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from pip import main as pip
 
-from library.config import config
+from library.config import config, get_switch, update_switch
 from library.depend import Permission
 from library.model import UserPerm, Module
 from module import (
@@ -81,9 +82,9 @@ channel.description("")
         decorators=[Permission.require(UserPerm.BOT_OWNER)],
     )
 )
-async def module_manager(
+async def module_manager_owner(
     app: Ariadne,
-    event: GroupMessage,
+    event: MessageEvent,
     function: MatchResult,
     update: MatchResult,
     name: ArgResult,
@@ -108,8 +109,6 @@ async def module_manager(
     msg = None
     if function in ("search", "搜索"):
         msg = await search(name=name, category=category, author=author)
-    elif function in ("list", "枚举"):
-        msg = await list_module()
     elif function in ("install", "安装"):
         msg = await install_module(name=name, update=update, version="")
     elif function in ("load", "加载"):
@@ -124,6 +123,68 @@ async def module_manager(
         await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
         )
+
+
+@channel.use(
+    ListenerSchema(
+        listening_events=[GroupMessage, FriendMessage],
+        inline_dispatchers=[
+            Twilight(
+                [
+                    UnionMatch(".plugin", "插件"),
+                    UnionMatch(
+                        "list", "enable", "disable", "列表", "枚举", "开启", "打开", "禁用", "关闭"
+                    )
+                    @ "func",
+                    WildcardMatch() @ "param",
+                ]
+            )
+        ],
+        decorators=[Permission.require(UserPerm.ADMINISTRATOR)],
+    )
+)
+async def module_manager_admin(
+    app: Ariadne, event: MessageEvent, func: MatchResult, param: MatchResult
+):
+    func = func.result.asDisplay()
+    param = param.result.asDisplay().strip().split()
+    msg = None
+    if func in ("list", "枚举"):
+        msg = await list_module(
+            event.sender.group.id if isinstance(event, GroupMessage) else None
+        )
+    elif func in ("enable", "开启", "打开", "disable", "禁用", "关闭") and isinstance(
+        event, GroupMessage
+    ):
+        msg = module_switch(
+            param,
+            event.sender.group.id,
+            False if func in ("disable", "禁用", "关闭") else True,
+        )
+    if msg:
+        await app.sendMessage(
+            event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
+        )
+
+
+def module_switch(modules: list, group: int, value: bool) -> MessageChain:
+    success_count = 0
+    failed = []
+    for name in modules:
+        if module := get_module(name):
+            if module.pack == channel.module:
+                failed.append(name)
+                continue
+            update_switch(pack=module.pack, group=group, value=True)
+            success_count += 1
+        else:
+            failed.append(name)
+    msg = MessageChain(f"已{'开启' if value else '关闭'} {success_count} 个插件")
+    if failed:
+        msg += MessageChain(f"\n以下 {len(failed)} 个插件无法找到或无法改动：")
+        for fail in failed:
+            msg += MessageChain(f"\n - {fail}")
+    return msg
 
 
 async def search(name: str, category: str, author: str) -> MessageChain:
@@ -169,7 +230,7 @@ async def search(name: str, category: str, author: str) -> MessageChain:
         return MessageChain(f"无法找到符合要求的插件")
 
 
-async def list_module() -> MessageChain:
+async def list_module(group: int = None) -> MessageChain:
     reload_metadata()
 
     from module import __all__ as modules
@@ -200,6 +261,14 @@ async def list_module() -> MessageChain:
             else "其他"
         )
         module_dependency = ", ".join(module.dependency) if module.dependency else "无"
+        if group:
+            if module.pack != channel.module:
+                switch = get_switch(module.pack, group) and module.installed
+            else:
+                switch = True
+            switch_status = f"\n - 开关：{'已' if switch else '未'}开启"
+        else:
+            switch_status = ""
         fwd_node_list.append(
             ForwardNode(
                 target=config.account,
@@ -214,6 +283,7 @@ async def list_module() -> MessageChain:
                     f"\n - 描述：{module.description}"
                     f"\n - 依赖：{module_dependency}"
                     f"\n - 状态：{'已' if module.installed else '未'}安装"
+                    f"{switch_status}"
                 ),
             )
         )
