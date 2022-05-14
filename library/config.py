@@ -4,6 +4,7 @@ from typing import NoReturn, Dict, Union
 
 from graia.ariadne.model import Group
 from loguru import logger
+from pydantic import BaseModel
 
 from library.model import Config
 
@@ -38,7 +39,9 @@ def get_module_config(module: str, key: str = None):
         return module_cfg
 
 
-def update_module_config(module: str, cfg: dict = None):
+def update_module_config(module: str, cfg: Union[dict, BaseModel] = None):
+    if isinstance(cfg, BaseModel):
+        cfg = cfg.dict()
     config.func.modules[module] = cfg
     save_config(config)
 
@@ -73,6 +76,7 @@ def update_switch(pack: str, group: Union[Group, int, str], value: bool):
         group = str(group)
     if pack in switch.keys():
         switch[pack][group] = value
+        write_switch(switch)
         return
     switch[pack] = {group: value}
     write_switch(switch)

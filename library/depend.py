@@ -1,6 +1,8 @@
 from typing import NoReturn
 
+from graia.ariadne import get_running, Ariadne
 from graia.ariadne.event.message import MessageEvent, GroupMessage
+from graia.ariadne.message.chain import MessageChain
 from graia.broadcast import ExecutionStop
 from graia.broadcast.builtin.decorators import Depend
 
@@ -10,9 +12,16 @@ from library.model import UserPerm
 
 class Permission:
     @classmethod
-    def require(cls, permission: UserPerm) -> Depend:
+    def require(cls, permission: UserPerm, on_failure: MessageChain = None) -> Depend:
         async def perm_check(event: MessageEvent) -> NoReturn:
             if not cls.permission_check(permission, event):
+                if on_failure:
+                    await get_running(Ariadne).sendMessage(
+                        event.sender.group
+                        if isinstance(event, GroupMessage)
+                        else event.sender,
+                        on_failure.asSendable(),
+                    )
                 raise ExecutionStop
 
         return Depend(perm_check)

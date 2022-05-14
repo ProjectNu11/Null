@@ -79,7 +79,11 @@ channel.description("")
                 ]
             )
         ],
-        decorators=[Permission.require(UserPerm.BOT_OWNER)],
+        decorators=[
+            Permission.require(
+                UserPerm.BOT_OWNER, MessageChain("权限不足，你需要来自 所有人 的权限才能进行本操作")
+            )
+        ],
     )
 )
 async def module_manager_owner(
@@ -140,7 +144,12 @@ async def module_manager_owner(
                 ]
             )
         ],
-        decorators=[Permission.require(UserPerm.ADMINISTRATOR)],
+        decorators=[
+            Permission.require(
+                UserPerm.ADMINISTRATOR,
+                MessageChain("权限不足，你需要来自 管理员 的权限才能进行本操作"),
+            )
+        ],
     )
 )
 async def module_manager_admin(
