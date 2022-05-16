@@ -29,6 +29,7 @@ from module import (
     remove_module_index,
     read_and_update_metadata,
     get_module,
+    add_module_index,
 )
 
 try:
@@ -300,8 +301,6 @@ async def list_module(group: int = None) -> MessageChain:
 
 
 async def install_module(name: str, update: bool, version: str = "") -> MessageChain:
-    from module import __all__
-
     if module := get_module(name):
         if not update:
             return MessageChain(f"已安装插件 {name}，将不会作出改动\n已安装版本：{module.version}")
@@ -360,7 +359,7 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
             with saya.module_context():
                 saya.require(module.pack)
             module.installed = True
-            __all__.append(module)
+            add_module_index(module)
             msg = MessageChain(f"成功安装插件 {name}\n已安装版本：{module.version}")
         except Exception as e:
             msg = MessageChain(f"安装插件 {name} 时发生错误：\n{e}")

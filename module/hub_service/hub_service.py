@@ -26,6 +26,22 @@ class HubService:
                 config.hub.metadata = HubMetadata(**resp.json())
                 save_config(config)
             with session.post(
+                url=config.hub.url
+                + config.hub.metadata.register_bot
+                + "?secret="
+                + config.hub.secret,
+                json={
+                    "id": config.account,
+                    "name": config.name,
+                    "num": config.num,
+                    "devGroup": config.dev_group,
+                    "owners": config.owners,
+                },
+            ) as resp:
+                data = resp.json()
+                config.num = data["num"]
+                save_config(config)
+            with session.post(
                 url=config.hub.url + config.hub.metadata.authorize,
                 data={"username": config.account, "password": config.hub.secret},
             ) as resp:
@@ -51,25 +67,6 @@ class HubService:
             self.__auth__ = {
                 "Authorization": f"Bearer {(await resp.json())['access_token']}"
             }
-
-    @staticmethod
-    async def register():
-        async with get_running(Adapter).session.post(
-            url=config.hub.url
-            + config.hub.metadata.register_bot
-            + "?secret="
-            + config.hub.secret,
-            json={
-                "id": config.account,
-                "name": config.name,
-                "num": config.num,
-                "devGroup": config.dev_group,
-                "owners": config.owners,
-            },
-        ) as resp:
-            data = await resp.json()
-            config.num = data["num"]
-            save_config(config)
 
     def get_auth_header(self):
         return self.__auth__
