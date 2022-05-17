@@ -42,12 +42,12 @@ class HubConfig(BaseModel):
 
 class PathConfig(BaseModel):
     root: Path = Path(__file__).parent.parent
-    config: Path = Path(root / "config")
+    # config: Path = Path(root / "config")
     data: Path = Path(root / "data")
 
     @root_validator()
     def path_check(cls, values: dict):
-        values.get("config").mkdir(parents=True, exist_ok=True)
+        # values.get("config").mkdir(parents=True, exist_ok=True)
         values.get("data").mkdir(parents=True, exist_ok=True)
         return values
 
@@ -92,6 +92,18 @@ class DatabaseConfig(BaseModel):
             ]
         ), f"Only MySQL and SQLite is supported.\n{example}"
         return link
+
+    @root_validator()
+    def config_check(cls, value: dict):
+        if value.get("link", None).startswith("mysql+aiomysql://") and not value.get(
+            "config", None
+        ):
+            value["config"] = MySQLConfig()
+        elif value.get("link", None).startswith(
+            "sqlite+aiosqlite:///data/data.db"
+        ) and value.get("config", None):
+            value["config"] = None
+        return value
 
 
 class Config(BaseModel):

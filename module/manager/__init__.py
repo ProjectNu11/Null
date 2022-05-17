@@ -1,4 +1,5 @@
 import asyncio
+import importlib
 import os
 import shutil
 from asyncio import Lock
@@ -7,6 +8,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from graia.ariadne import Ariadne
+from graia.ariadne.event.lifecycle import ApplicationLaunched
 from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEvent
 from graia.ariadne.message.chain import MessageChain
 from graia.ariadne.message.element import Plain, ForwardNode, Forward
@@ -21,10 +23,12 @@ from graia.ariadne.message.parser.twilight import (
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from pip import main as pip
+from sqlalchemy.exc import InternalError, ProgrammingError
 
 from library.config import config, get_switch, update_switch
 from library.depend import Permission
 from library.model import UserPerm, Module
+from library.orm import orm
 from module import (
     remove_module_index,
     read_and_update_metadata,
@@ -356,6 +360,13 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
                         os.path.join(module_dir),
                     )
                     break
+            if module.db:
+                try:
+                    importlib.import_module(f"{module.pack}.table")
+                except ImportError:
+                    pass
+                finally:
+                    await db_init()
             with saya.module_context():
                 saya.require(module.pack)
             module.installed = True
@@ -374,6 +385,13 @@ async def load_module(name: str) -> MessageChain:
     reload_metadata()
     if module := get_module(name):
         try:
+            if module.db:
+                try:
+                    importlib.import_module(f"{module.pack}.table")
+                except ImportError:
+                    pass
+                finally:
+                    await db_init()
             with saya.module_context():
                 saya.require(module.pack)
             module.installed = True
@@ -424,3 +442,15 @@ def reload_metadata() -> NoReturn:
     __all__.clear()
     for mod in enabled + disabled:
         __all__.append(mod)
+
+
+async def db_init():
+    try:
+        await orm.init_check()
+    except (AttributeError, InternalError, ProgrammingError):
+        await orm.create_all()
+
+
+@channel.use(ListenerSchema(listening_events=[ApplicationLaunched]))
+async def init():
+    await db_init()
