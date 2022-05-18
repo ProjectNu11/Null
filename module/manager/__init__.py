@@ -194,7 +194,7 @@ def module_switch(modules: list, group: int, value: bool) -> MessageChain:
             if module.pack == channel.module:
                 failed.append(name)
                 continue
-            update_switch(pack=module.pack, group=group, value=True)
+            update_switch(pack=module.pack, group=group, value=value)
             success_count += 1
         else:
             failed.append(name)
