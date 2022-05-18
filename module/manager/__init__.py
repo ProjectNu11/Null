@@ -1,11 +1,10 @@
 import asyncio
-import importlib
 import os
 import shutil
 from asyncio import Lock
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import NoReturn, Union
+from typing import NoReturn, Union, List
 
 from graia.ariadne import Ariadne
 from graia.ariadne.event.lifecycle import ApplicationLaunched
@@ -68,6 +67,7 @@ channel.description("")
                         "info",
                         "list",
                         "search",
+                        "upgrade",
                         "安装",
                         "删除",
                         "加载",
@@ -76,10 +76,11 @@ channel.description("")
                         "详情",
                         "枚举",
                         "搜索",
+                        "升级",
                     )
                     @ "function",
-                    UnionMatch("-u", "--update", optional=True) @ "update",
-                    ArgumentMatch("-n", "--name", optional=True) @ "name",
+                    UnionMatch("-u", "--upgrade", optional=True) @ "upgrade",
+                    WildcardMatch(optional=True) @ "name",
                     ArgumentMatch("-c", "--category", optional=True) @ "category",
                     ArgumentMatch("-a", "--author", optional=True) @ "author",
                 ]
@@ -96,31 +97,32 @@ async def module_manager_owner(
     app: Ariadne,
     event: MessageEvent,
     function: MatchResult,
-    update: MatchResult,
+    upgrade: MatchResult,
     name: ArgResult,
     category: ArgResult,
     author: ArgResult,
 ):
     function: str = function.result.asDisplay()
-    if not hs and function in (
-        "install",
-        "search",
-        "安装",
-        "搜索",
-    ):
+    if not hs and function in ("install", "search", "upgrade", "安装", "搜索", "升级"):
         return await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender,
             MessageChain(f"HubService 未启用，无法使用 {function}"),
         )
-    update: bool = update.matched
-    name: str = str(name.result) if name.matched else ""
+    upgrade: bool = upgrade.matched
+    name: Union[List[str], str] = str(name.result) if name.matched else ""
     category: str = str(category.result) if category.matched else ""
     author: str = str(author.result) if author.matched else ""
     msg = None
     if function in ("search", "搜索"):
         msg = await search(name=name, category=category, author=author)
     elif function in ("install", "安装"):
-        msg = await install_module(name=name, update=update, version="")
+        name = name.split()
+        for mod_name in name:
+            await app.sendMessage(
+                event.sender.group if isinstance(event, GroupMessage) else event.sender,
+                await install_module(name=mod_name, upgrade=upgrade, version=""),
+            )
+        return
     elif function in ("load", "加载"):
         msg = await load_module(name=name)
     elif function in ("reload", "重载"):
@@ -129,6 +131,8 @@ async def module_manager_owner(
         msg = await unload_module(name=name)
     elif function in ("uninstall", "删除"):
         pass
+    elif function in ("upgrade", "升级"):
+        msg = await upgrade_module()
     if msg:
         await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
@@ -227,7 +231,7 @@ async def search(name: str, category: str, author: str) -> MessageChain:
                 ForwardNode(
                     target=config.account,
                     name=f"{config.name}#{config.num}",
-                    time=datetime.now() + timedelta(seconds=15),
+                    time=datetime.now() + timedelta(seconds=15) * (index + 1),
                     message=MessageChain(
                         f"{index + 1}. {module.name}"
                         f"\n - 包名：{module.pack}"
@@ -288,7 +292,7 @@ async def list_module(group: int = None) -> MessageChain:
             ForwardNode(
                 target=config.account,
                 name=f"{config.name}#{config.num}",
-                time=datetime.now() + timedelta(seconds=15),
+                time=datetime.now() + timedelta(seconds=15) * (index + 1),
                 message=MessageChain(
                     f"{index + 1}. {module.name}"
                     f"\n - 包名：{module.pack}"
@@ -307,13 +311,13 @@ async def list_module(group: int = None) -> MessageChain:
 
 async def install_module(
     name: str,
-    update: bool,
+    upgrade: bool,
     version: str = "",
     *,
     is_dependency: bool = False,
 ) -> Union[str, MessageChain]:
     if module := get_module(name):
-        if not update:
+        if not upgrade:
             return MessageChain(f"已安装插件 {name}，将不会作出改动\n已安装版本：{module.version}")
         elif chn := saya.channels.get(module.pack, None):
             remove_module_index(module.pack)
@@ -364,7 +368,7 @@ async def install_module(
                             msg.append(
                                 await install_module(
                                     dependency,
-                                    update=True,
+                                    upgrade=True,
                                     is_dependency=True,
                                 )
                             )
@@ -402,14 +406,10 @@ async def load_module(name: str) -> MessageChain:
     reload_metadata()
     if module := get_module(name):
         try:
-            if module.db:
-                try:
-                    importlib.import_module(f"{module.pack}.table")
-                except ImportError:
-                    pass
-                finally:
-                    await db_init()
             with saya.module_context():
+                saya.require(module.pack)
+                if module.db:
+                    await db_init()
                 saya.require(module.pack)
             module.installed = True
             return MessageChain(f"已加载插件 {name}")
@@ -431,6 +431,42 @@ async def unload_module(name: str) -> MessageChain:
 async def reload_module(name: str) -> MessageChain:
     await unload_module(name)
     return await load_module(name)
+
+
+async def upgrade_module() -> MessageChain:
+    reload_metadata()
+    from module import __all__
+
+    msg = []
+    for mod in list(__all__):
+        if modules := await hs.search_module(name=mod.pack):
+            if modules[0].version == mod.version:
+                continue
+            msg.append(
+                await install_module(
+                    name=mod.pack, version=modules[0].version, upgrade=True
+                )
+            )
+        continue
+    if msg:
+        fwd_node_list = [
+            ForwardNode(
+                target=config.account,
+                name=f"{config.name}#{config.num}",
+                time=datetime.now(),
+                message=MessageChain(f"已更新 {len(msg)} 个插件"),
+            )
+        ] + [
+            ForwardNode(
+                target=config.account,
+                name=f"{config.name}#{config.num}",
+                time=datetime.now() + timedelta(seconds=15) * (index + 1),
+                message=msg_chain,
+            )
+            for index, msg_chain in enumerate(msg)
+        ]
+        return MessageChain.create([Forward(nodeList=fwd_node_list)])
+    return MessageChain("暂无更新可用")
 
 
 def reload_metadata() -> NoReturn:

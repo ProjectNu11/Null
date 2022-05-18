@@ -139,6 +139,10 @@ class HubService:
         category: Literal["utility", "entertainment", "misc"] = "",
         dependency: str = "",
     ) -> Union[None, List[Module]]:
+        if not any(
+            [name, pack, version, author, isinstance(pypi, bool), category, dependency]
+        ):
+            return
         if name == "*":
             params = "?all=True"
         else:
@@ -156,10 +160,6 @@ class HubService:
             if isinstance(pypi, bool):
                 param.append(f"pypi={pypi}")
             params = f"?{'&'.join(params)}"
-        if not any(
-            [name, pack, version, author, isinstance(pypi, bool), category, dependency]
-        ):
-            return
         async with get_running(Adapter).session.get(
             url=config.hub.url + config.hub.metadata.search_module + params,
             headers=self.__auth__,
