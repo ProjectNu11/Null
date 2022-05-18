@@ -5,7 +5,7 @@ import shutil
 from asyncio import Lock
 from datetime import datetime, timedelta
 from pathlib import Path
-from typing import NoReturn
+from typing import NoReturn, Union
 
 from graia.ariadne import Ariadne
 from graia.ariadne.event.lifecycle import ApplicationLaunched
@@ -22,6 +22,7 @@ from graia.ariadne.message.parser.twilight import (
 )
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
+from loguru import logger
 from pip import main as pip
 from sqlalchemy.exc import InternalError, ProgrammingError
 
@@ -304,7 +305,13 @@ async def list_module(group: int = None) -> MessageChain:
     return MessageChain.create([Forward(nodeList=fwd_node_list)])
 
 
-async def install_module(name: str, update: bool, version: str = "") -> MessageChain:
+async def install_module(
+    name: str,
+    update: bool,
+    version: str = "",
+    *,
+    is_dependency: bool = False,
+) -> Union[str, MessageChain]:
     if module := get_module(name):
         if not update:
             return MessageChain(f"已安装插件 {name}，将不会作出改动\n已安装版本：{module.version}")
@@ -312,11 +319,14 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
             remove_module_index(module.pack)
             saya.uninstall_channel(chn)
     if data_bytes := await hs.download_module(name=name, version=version):
-        msg = MessageChain(f"安装插件 {name} 时发送错误")
+        msg = []
         cache_dir = Path(__file__).parent.parent / "__cache__"
+        if is_dependency:
+            cache_dir = cache_dir / "__dependency__"
         module_dir = Path(__file__).parent.parent
         try:
-            await install_lock.acquire()
+            if not is_dependency:
+                await install_lock.acquire()
             cache_dir.mkdir(exist_ok=True)
             with (cache_dir / f"{name}.zip").open("wb") as f:
                 f.write(data_bytes)
@@ -350,7 +360,14 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
                         )
                     if module.dependency:
                         for dependency in module.dependency:
-                            await install_module(dependency, update=True)
+                            logger.info(f"Installing dependency: {dependency}")
+                            msg.append(
+                                await install_module(
+                                    dependency,
+                                    update=True,
+                                    is_dependency=True,
+                                )
+                            )
                     path_name = path.name.replace("-", "_").strip("_")
                     if path.name != path_name:
                         os.rename(path, path.parent / path_name)
@@ -369,14 +386,16 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
                     await db_init()
             module.installed = True
             add_module_index(module)
-            msg = MessageChain(f"成功安装插件 {name}\n已安装版本：{module.version}")
+            msg.append(f"成功安装插件 {name}\n已安装版本：{module.version}")
         except Exception as e:
-            msg = MessageChain(f"安装插件 {name} 时发生错误：\n{e}")
+            msg.append(f"安装插件 {name} 时发生错误：\n{e}")
         finally:
             shutil.rmtree(cache_dir)
-            install_lock.release()
-            return msg
-    return MessageChain("无法找到符合要求的插件")
+            if not is_dependency:
+                install_lock.release()
+            text = "\n===============\n".join(msg)
+            return MessageChain(text) if not is_dependency else text
+    return MessageChain("无法找到符合要求的插件") if not is_dependency else "无法找到符合要求的插件"
 
 
 async def load_module(name: str) -> MessageChain:
