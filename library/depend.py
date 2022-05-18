@@ -41,18 +41,30 @@ class Permission:
 
 class Switch:
     @staticmethod
-    def check(pack: str, override_level: UserPerm = None) -> Depend:
+    def check(
+        pack: str, override_level: UserPerm = None, on_failure: MessageChain = None
+    ) -> Depend:
         async def switch_check(event: MessageEvent) -> NoReturn:
             if override_level:
                 if Permission.permission_check(override_level, event):
                     return
-            if isinstance(event, GroupMessage):
-                value = get_switch(pack, event.sender.group)
-                if isinstance(value, bool):
-                    if not value:
-                        raise ExecutionStop
-                    return
-            if not config.func.default:
-                raise ExecutionStop
+            try:
+                if isinstance(event, GroupMessage):
+                    value = get_switch(pack, event.sender.group)
+                    if isinstance(value, bool):
+                        if not value:
+                            raise ExecutionStop
+                        return
+                if not config.func.default:
+                    raise ExecutionStop
+            except ExecutionStop:
+                if on_failure:
+                    await get_running(Ariadne).sendMessage(
+                        event.sender.group
+                        if isinstance(event, GroupMessage)
+                        else event.sender,
+                        on_failure.asSendable(),
+                    )
+                raise
 
         return Depend(switch_check)
