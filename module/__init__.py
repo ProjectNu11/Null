@@ -21,6 +21,9 @@ def read_and_update_metadata(file: Path, is_dir: bool = False) -> Module:
         if is_dir
         else (file.parent / f"{file.stem}-requirements.txt")
     )
+    table_dir = (
+        (file / "table.py") if is_dir else (file.parent / f"{file.stem}-table.py")
+    )
     module = None
     try:
         with metadata_dir.open("r", encoding="utf-8") as f:
@@ -32,6 +35,7 @@ def read_and_update_metadata(file: Path, is_dir: bool = False) -> Module:
             name=file.stem,
             pack=f"module.{file.stem}",
             pypi=req_dir.is_file(),
+            db=table_dir.is_file(),
         )
     finally:
         if module:

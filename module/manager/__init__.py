@@ -348,6 +348,9 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
                                 str(path / "requirements.txt"),
                             ],
                         )
+                    if module.dependency:
+                        for dependency in module.dependency:
+                            await install_module(dependency, update=True)
                     path_name = path.name.replace("-", "_").strip("_")
                     if path.name != path_name:
                         os.rename(path, path.parent / path_name)
@@ -360,15 +363,10 @@ async def install_module(name: str, update: bool, version: str = "") -> MessageC
                         os.path.join(module_dir),
                     )
                     break
-            if module.db:
-                try:
-                    importlib.import_module(f"{module.pack}.table")
-                except ImportError:
-                    pass
-                finally:
-                    await db_init()
             with saya.module_context():
                 saya.require(module.pack)
+                if module.db:
+                    await db_init()
             module.installed = True
             add_module_index(module)
             msg = MessageChain(f"成功安装插件 {name}\n已安装版本：{module.version}")
