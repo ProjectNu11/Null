@@ -1,0 +1,64 @@
+site_name: Project. Null 使用文档
+nav:
+  - 主页: index.md
+  - 项目部署:
+      - 前言: deploy/index.md
+      - 开始:
+          - 准备: deploy/prepare.md
+          - 部署: deploy/deploy.md
+          - 配置: deploy/configure.md
+      - 管理:
+          - 插件管理: deploy/plugin.md
+          - 中心服务: deploy/hub.md
+  - 二次开发:
+      - 前言: develop/index.md
+  - 插件详情:
+      - 前言: plugin/index.md
+  - 关于: about.md
+theme:
+  name: material
+  language: zh
+  icon:
+    repo: fontawesome/brands/github
+  palette:
+    - scheme: default
+      toggle:
+        icon: material/toggle-switch
+        name: Switch to dark mode
+    - scheme: slate
+      toggle:
+        icon: material/toggle-switch-off-outline
+        name: Switch to light mode
+  features:
+    - toc.integrate
+    - navigation.instant
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.expand
+    - navigation.top
+repo_url: https://github.com/nullqwertyuiop/Project-Null
+repo_name: nullqwertyuiop/Project-Null
+plugins:
+  - search
+markdown_extensions:
+  - pymdownx.emoji:
+      emoji_index: !!python/name:materialx.emoji.twemoji
+      emoji_generator: !!python/name:materialx.emoji.to_svg
+  - attr_list
+  - admonition
+  - pymdownx.details
+  - pymdownx.superfences
+  - pymdownx.critic
+  - pymdownx.caret
+  - pymdownx.keys
+  - pymdownx.mark
+  - pymdownx.tilde
+  - toc:
+      permalink: 🔗
+      title: 目录
+extra:
+  social:
+    - icon: fontawesome/brands/twitter
+      link: https://twitter.com/nullqwertyuiop
+    - icon: fontawesome/brands/github
+      link: https://github.com/nullqwertyuiop
