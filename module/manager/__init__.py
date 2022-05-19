@@ -25,7 +25,7 @@ from loguru import logger
 from pip import main as pip
 from sqlalchemy.exc import InternalError, ProgrammingError
 
-from library.config import config, get_switch, update_switch
+from library.config import config, get_switch, update_switch, reload_config
 from library.depend import Permission
 from library.model import UserPerm, Module
 from library.orm import orm
@@ -180,6 +180,45 @@ async def module_manager_admin(
             event.sender.group.id,
             False if func in ("disable", "禁用", "关闭") else True,
         )
+    if msg:
+        await app.sendMessage(
+            event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
+        )
+
+
+@channel.use(
+    ListenerSchema(
+        listening_events=[GroupMessage, FriendMessage],
+        inline_dispatchers=[
+            Twilight(
+                [
+                    UnionMatch(".config", "配置"),
+                    UnionMatch("view", "update", "reload", "查看", "更新", "重载") @ "func",
+                    WildcardMatch() @ "param",
+                ]
+            )
+        ],
+        decorators=[
+            Permission.require(
+                UserPerm.ADMINISTRATOR,
+                MessageChain("权限不足，你需要来自 管理员 的权限才能进行本操作"),
+            )
+        ],
+    )
+)
+async def config_manager_admin(
+    app: Ariadne, event: MessageEvent, func: MatchResult, param: MatchResult
+):
+    func = func.result.asDisplay()
+    # param = param.result.asDisplay().strip().split()
+    msg = None
+    if func in ("view", "查看"):
+        pass
+    elif func in ("update", "更新"):
+        pass
+    elif func in ("reload", "重载"):
+        reload_config()
+        msg = MessageChain("成功重载配置")
     if msg:
         await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg

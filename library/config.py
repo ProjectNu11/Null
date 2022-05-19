@@ -28,6 +28,11 @@ def load_config() -> Config:
         return Config(**json.loads(_.read()))
 
 
+def reload_config() -> NoReturn:
+    global config
+    config = load_config()
+
+
 config: Config = load_config()
 save_config(config)
 
