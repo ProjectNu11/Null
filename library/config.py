@@ -39,9 +39,7 @@ save_config(config)
 
 def get_module_config(module: str, key: str = None):
     if module_cfg := config.func.modules.get(module, None):
-        if key:
-            return module_cfg.get(key, None)
-        return module_cfg
+        return module_cfg.get(key, None) if key else module_cfg
 
 
 def update_module_config(module: str, cfg: Union[dict, BaseModel] = None):

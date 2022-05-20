@@ -29,7 +29,7 @@ class HubConfig(BaseModel):
     metadata: Union[None, HubMetadata] = None
 
     @root_validator()
-    def hub_check(cls, values: dict):
+    def hub_check(self, values: dict):
         assert not (
             values.get("enabled", False) and values.get("secret", "") == ""
         ), "secret must be filled when hub is enabled"
@@ -46,7 +46,7 @@ class PathConfig(BaseModel):
     data: Path = Path(root / "data")
 
     @root_validator()
-    def path_check(cls, values: dict):
+    def path_check(self, values: dict):
         # values.get("config").mkdir(parents=True, exist_ok=True)
         values.get("data").mkdir(parents=True, exist_ok=True)
         return values
@@ -63,7 +63,7 @@ class MySQLConfig(BaseModel):
     max_overflow: int = 60
 
     @root_validator()
-    def mysql_check(cls, value: dict):
+    def mysql_check(self, value: dict):
         assert not all(
             [
                 value.get("pool_size", 0) + value.get("max_overflow", 0) <= 0,
@@ -94,7 +94,7 @@ class DatabaseConfig(BaseModel):
         return link
 
     @root_validator()
-    def config_check(cls, value: dict):
+    def config_check(self, value: dict):
         if value.get("link", None).startswith("mysql+aiomysql://") and not value.get(
             "config", None
         ):
