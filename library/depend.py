@@ -49,12 +49,13 @@ class Switch:
                 if Permission.permission_check(override_level, event):
                     return
             try:
-                if isinstance(event, GroupMessage):
-                    value = get_switch(pack, event.sender.group)
-                    if isinstance(value, bool):
-                        if not value:
-                            raise ExecutionStop
-                        return
+                value = get_switch(
+                    pack, event.sender.group if isinstance(event, GroupMessage) else 0
+                )
+                if isinstance(value, bool):
+                    if not value:
+                        raise ExecutionStop
+                    return
                 if not config.func.default:
                     raise ExecutionStop
             except ExecutionStop:

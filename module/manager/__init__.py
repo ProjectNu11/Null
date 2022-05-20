@@ -170,14 +170,12 @@ async def module_manager_admin(
     msg = None
     if func in ("list", "枚举"):
         msg = await list_module(
-            event.sender.group.id if isinstance(event, GroupMessage) else None
+            event.sender.group.id if isinstance(event, GroupMessage) else 0
         )
-    elif func in ("enable", "开启", "打开", "disable", "禁用", "关闭") and isinstance(
-        event, GroupMessage
-    ):
+    elif func in ("enable", "开启", "打开", "disable", "禁用", "关闭"):
         msg = module_switch(
             param,
-            event.sender.group.id,
+            event.sender.group.id if isinstance(event, GroupMessage) else 0,
             False if func in ("disable", "禁用", "关闭") else True,
         )
     if msg:
