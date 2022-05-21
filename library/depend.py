@@ -45,9 +45,8 @@ class Switch:
         pack: str, override_level: UserPerm = None, on_failure: MessageChain = None
     ) -> Depend:
         async def switch_check(event: MessageEvent) -> NoReturn:
-            if override_level:
-                if Permission.permission_check(override_level, event):
-                    return
+            if override_level and Permission.permission_check(override_level, event):
+                return
             try:
                 value = get_switch(
                     pack, event.sender.group if isinstance(event, GroupMessage) else 0

@@ -29,7 +29,7 @@ def read_and_update_metadata(file: Path, is_dir: bool = False) -> Module:
         with metadata_dir.open("r", encoding="utf-8") as f:
             content = json.loads(f.read())
             module = Module(**content)
-    except (ValidationError, JSONDecodeError, FileNotFoundError):
+    except (ValidationError, FileNotFoundError):
         logger.error(f"Validation failed for module/{file.stem}")
         module = Module(
             name=file.stem,
