@@ -174,9 +174,9 @@ class HubService:
             f"&version={urllib.parse.quote(version)}" if version else ""
         )
         async with get_running(Adapter).session.get(
-                url=config.hub.url + config.hub.metadata.download_module + params,
-                headers=self.__auth__,
-            ) as resp:
+            url=config.hub.url + config.hub.metadata.download_module + params,
+            headers=self.__auth__,
+        ) as resp:
             return await resp.read() if resp.status == 200 else None
 
 
