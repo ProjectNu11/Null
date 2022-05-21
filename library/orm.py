@@ -45,19 +45,14 @@ class AsyncEngine:
 
     async def fetchone(self, sql):
         result = await self.execute(sql)
-        one = result.fetchone()
-        if one:
-            return one
-        else:
-            return None
+        return one if (one := result.fetchone()) else None
 
     async def fetchone_dt(self, sql, n=999999):
         result = await self.execute(sql)
         columns = result.keys()
         length = len(columns)
         for _ in range(n):
-            one = result.fetchone()
-            if one:
+            if one := result.fetchone():
                 yield {columns[i]: one[i] for i in range(length)}
 
     @staticmethod

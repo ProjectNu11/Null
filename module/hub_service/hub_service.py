@@ -147,16 +147,19 @@ class HubService:
             params = "?all=True"
         else:
             params = []
-            for param_name, param in (
-                ("name", name),
-                ("pack", pack),
-                ("version", version),
-                ("author", author),
-                ("category", category),
-                ("dependency", dependency),
-            ):
-                if param:
-                    params.append(f"{param_name}={urllib.parse.quote(param)}")
+            params.extend(
+                f"{param_name}={urllib.parse.quote(param)}"
+                for param_name, param in (
+                    ("name", name),
+                    ("pack", pack),
+                    ("version", version),
+                    ("author", author),
+                    ("category", category),
+                    ("dependency", dependency),
+                )
+                if param
+            )
+
             if isinstance(pypi, bool):
                 param.append(f"pypi={pypi}")
             params = f"?{'&'.join(params)}"
@@ -174,9 +177,7 @@ class HubService:
             url=config.hub.url + config.hub.metadata.download_module + params,
             headers=self.__auth__,
         ) as resp:
-            if resp.status == 200:
-                return await resp.read()
-            return None
+            return await resp.read() if resp.status == 200 else None
 
 
 hs = HubService()
