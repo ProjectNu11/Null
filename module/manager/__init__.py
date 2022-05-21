@@ -103,7 +103,7 @@ async def module_manager_owner(
     author: ArgResult,
 ):
     function: str = function.result.asDisplay()
-    if not hs and function in ("install", "search", "upgrade", "安装", "搜索", "升级"):
+    if not hs and function in {"install", "search", "upgrade", "安装", "搜索", "升级"}:
         return await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender,
             MessageChain(f"HubService 未启用，无法使用 {function}"),
@@ -113,9 +113,9 @@ async def module_manager_owner(
     category: str = str(category.result) if category.matched else ""
     author: str = str(author.result) if author.matched else ""
     msg = None
-    if function in ("search", "搜索"):
+    if function in {"search", "搜索"}:
         msg = await search(name=name, category=category, author=author)
-    elif function in ("install", "安装"):
+    elif function in {"install", "安装"}:
         name = name.split()
         for mod_name in name:
             await app.sendMessage(
@@ -123,15 +123,15 @@ async def module_manager_owner(
                 await install_module(name=mod_name, upgrade=upgrade, version=""),
             )
         return
-    elif function in ("load", "加载"):
+    elif function in {"load", "加载"}:
         msg = await load_module(name=name)
-    elif function in ("reload", "重载"):
+    elif function in {"reload", "重载"}:
         msg = await reload_module(name=name)
-    elif function in ("unload", "卸载"):
+    elif function in {"unload", "卸载"}:
         msg = await unload_module(name=name)
-    elif function in ("uninstall", "删除"):
+    elif function in {"uninstall", "删除"}:
         pass
-    elif function in ("upgrade", "升级"):
+    elif function in {"upgrade", "升级"}:
         msg = await upgrade_module()
     if msg:
         await app.sendMessage(
@@ -176,8 +176,9 @@ async def module_manager_admin(
         msg = module_switch(
             param,
             event.sender.group.id if isinstance(event, GroupMessage) else 0,
-            False if func in ("disable", "禁用", "关闭") else True,
+            func not in ("disable", "禁用", "关闭"),
         )
+
     if msg:
         await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
@@ -211,8 +212,10 @@ async def config_manager_admin(
     # param = param.result.asDisplay().strip().split()
     msg = None
     if func in ("view", "查看"):
+        # TODO add view_module
         pass
     elif func in ("update", "更新"):
+        # TODO add update_module
         pass
     elif func in ("reload", "重载"):
         reload_config()
@@ -244,46 +247,45 @@ def module_switch(modules: list, group: int, value: bool) -> MessageChain:
 
 
 async def search(name: str, category: str, author: str) -> MessageChain:
-    if modules := await hs.search_module(name=name, category=category, author=author):
-        fwd_node_list = [
+    if not (
+        modules := await hs.search_module(name=name, category=category, author=author)
+    ):
+        return MessageChain("无法找到符合要求的插件")
+    fwd_node_list = [
+        ForwardNode(
+            target=config.account,
+            name=f"{config.name}#{config.num}",
+            time=datetime.now(),
+            message=MessageChain(f"查询到 {len(modules)} 个插件"),
+        )
+    ]
+    for index, module in enumerate(modules):
+        module_category = (
+            "实用工具"
+            if module.category == "utility"
+            else "娱乐"
+            if module.category == "entertainment"
+            else "其他"
+        )
+        module_dependency = ", ".join(module.dependency) if module.dependency else "无"
+        fwd_node_list += [
             ForwardNode(
                 target=config.account,
                 name=f"{config.name}#{config.num}",
-                time=datetime.now(),
-                message=MessageChain(f"查询到 {len(modules)} 个插件"),
+                time=datetime.now() + timedelta(seconds=15) * (index + 1),
+                message=MessageChain(
+                    f"{index + 1}. {module.name}"
+                    f"\n - 包名：{module.pack}"
+                    f"\n - 版本：{module.version}"
+                    f"\n - 作者：{', '.join(module.author)}"
+                    f"\n - 分类：{module_category}"
+                    f"\n - 描述：{module.description}"
+                    f"\n - 依赖：{module_dependency}"
+                    f"\n - Pypi：{'是' if module.pypi else '否'}"
+                ),
             )
         ]
-        for index, module in enumerate(modules):
-            module_category = (
-                "实用工具"
-                if module.category == "utility"
-                else "娱乐"
-                if module.category == "entertainment"
-                else "其他"
-            )
-            module_dependency = (
-                ", ".join(module.dependency) if module.dependency else "无"
-            )
-            fwd_node_list += [
-                ForwardNode(
-                    target=config.account,
-                    name=f"{config.name}#{config.num}",
-                    time=datetime.now() + timedelta(seconds=15) * (index + 1),
-                    message=MessageChain(
-                        f"{index + 1}. {module.name}"
-                        f"\n - 包名：{module.pack}"
-                        f"\n - 版本：{module.version}"
-                        f"\n - 作者：{', '.join(module.author)}"
-                        f"\n - 分类：{module_category}"
-                        f"\n - 描述：{module.description}"
-                        f"\n - 依赖：{module_dependency}"
-                        f"\n - Pypi：{'是' if module.pypi else '否'}"
-                    ),
-                )
-            ]
-        return MessageChain.create([Forward(nodeList=fwd_node_list)])
-    else:
-        return MessageChain(f"无法找到符合要求的插件")
+    return MessageChain.create([Forward(nodeList=fwd_node_list)])
 
 
 async def list_module(group: int = None) -> MessageChain:
@@ -435,8 +437,8 @@ async def install_module(
             if not is_dependency:
                 install_lock.release()
             text = "\n===============\n".join(msg)
-            return MessageChain(text) if not is_dependency else text
-    return MessageChain("无法找到符合要求的插件") if not is_dependency else "无法找到符合要求的插件"
+            return text if is_dependency else MessageChain(text)
+    return "无法找到符合要求的插件" if is_dependency else MessageChain("无法找到符合要求的插件")
 
 
 async def load_module(name: str) -> MessageChain:
