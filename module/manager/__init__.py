@@ -64,8 +64,6 @@ channel.description("")
                         "load",
                         "reload",
                         "unload",
-                        "info",
-                        "list",
                         "search",
                         "upgrade",
                         "安装",
@@ -73,8 +71,6 @@ channel.description("")
                         "加载",
                         "重载",
                         "卸载",
-                        "详情",
-                        "枚举",
                         "搜索",
                         "升级",
                     )
