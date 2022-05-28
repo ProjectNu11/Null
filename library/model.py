@@ -42,12 +42,10 @@ class HubConfig(BaseModel):
 
 class PathConfig(BaseModel):
     root: Path = Path(__file__).parent.parent
-    # config: Path = Path(root / "config")
     data: Path = Path(root / "data")
 
     @root_validator()
     def path_check(cls, values: dict):
-        # values.get("config").mkdir(parents=True, exist_ok=True)
         values.get("data").mkdir(parents=True, exist_ok=True)
         return values
 
@@ -148,11 +146,11 @@ class Module(BaseModel):
     version: str = "Unknown"
     author: List[str] = ["Unknown"]
     pypi: bool = False
-    db: bool = False
     category: Literal["utility", "entertainment", "misc"] = "misc"
     description: str = ""
     dependency: List[str] = None
-    installed: bool = False
+    loaded: bool = True
+    override_default: Union[None, bool] = None
 
     @validator("category", pre=True)
     def category_validator(cls, category: str):

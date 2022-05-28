@@ -21,9 +21,10 @@ if __name__ == """__main__""":
     )
     with saya.module_context():
         for mod in module.__all__:
+            if not mod.loaded:
+                continue
             try:
                 saya.require(mod.pack)
-                mod.installed = True
             except Exception as e:
                 logger.error(e)
     ariadne.launch_blocking()
