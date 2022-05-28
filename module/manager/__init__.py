@@ -26,7 +26,7 @@ from pip import main as pip
 from sqlalchemy.exc import InternalError, ProgrammingError
 
 from library.config import config, get_switch, update_switch, reload_config
-from library.depend import Permission
+from library.depend import Permission, FunctionCall
 from library.model import UserPerm, Module
 from library.orm import orm
 from module import (
@@ -76,6 +76,7 @@ channel.description("")
                     )
                     @ "function",
                     UnionMatch("-u", "--upgrade", optional=True) @ "upgrade",
+                    UnionMatch("-f", "--force", optional=True) @ "force",
                     WildcardMatch(optional=True) @ "name",
                     ArgumentMatch("-c", "--category", optional=True) @ "category",
                     ArgumentMatch("-a", "--author", optional=True) @ "author",
@@ -85,7 +86,8 @@ channel.description("")
         decorators=[
             Permission.require(
                 UserPerm.BOT_OWNER, MessageChain("权限不足，你需要来自 所有人 的权限才能进行本操作")
-            )
+            ),
+            FunctionCall.record(channel.module),
         ],
     )
 )
@@ -94,6 +96,7 @@ async def module_manager_owner(
     event: MessageEvent,
     function: MatchResult,
     upgrade: MatchResult,
+    force: MatchResult,
     name: ArgResult,
     category: ArgResult,
     author: ArgResult,
@@ -105,6 +108,7 @@ async def module_manager_owner(
             MessageChain(f"HubService 未启用，无法使用 {function}"),
         )
     upgrade: bool = upgrade.matched
+    force: bool = force.matched
     name: Union[List[str], str] = str(name.result) if name.matched else ""
     category: str = str(category.result) if category.matched else ""
     author: str = str(author.result) if author.matched else ""
@@ -128,7 +132,7 @@ async def module_manager_owner(
     elif function in {"uninstall", "删除"}:
         pass
     elif function in {"upgrade", "升级"}:
-        msg = await upgrade_module()
+        msg = await upgrade_module(force)
     if msg:
         await app.sendMessage(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
@@ -154,7 +158,8 @@ async def module_manager_owner(
             Permission.require(
                 UserPerm.ADMINISTRATOR,
                 MessageChain("权限不足，你需要来自 管理员 的权限才能进行本操作"),
-            )
+            ),
+            FunctionCall.record(channel.module),
         ],
     )
 )
@@ -197,7 +202,8 @@ async def module_manager_admin(
             Permission.require(
                 UserPerm.ADMINISTRATOR,
                 MessageChain("权限不足，你需要来自 管理员 的权限才能进行本操作"),
-            )
+            ),
+            FunctionCall.record(channel.module),
         ],
     )
 )
@@ -289,8 +295,8 @@ async def list_module(group: int = None) -> MessageChain:
 
     from module import __all__ as modules
 
-    enabled = list(filter(lambda x: x.installed, modules))
-    disabled = list(filter(lambda x: not x.installed, modules))
+    enabled = list(filter(lambda x: x.loaded, modules))
+    disabled = list(filter(lambda x: not x.loaded, modules))
     fwd_node_list = [
         ForwardNode(
             target=config.account,
@@ -317,7 +323,7 @@ async def list_module(group: int = None) -> MessageChain:
         module_dependency = ", ".join(module.dependency) if module.dependency else "无"
         if group:
             if module.pack != channel.module:
-                switch = get_switch(module.pack, group) and module.installed
+                switch = get_switch(module.pack, group) and module.loaded
             else:
                 switch = True
             switch_status = f"\n - 开关：{'已' if switch else '未'}开启"
@@ -336,7 +342,7 @@ async def list_module(group: int = None) -> MessageChain:
                     f"\n - 分类：{module_category}"
                     f"\n - 描述：{module.description}"
                     f"\n - 依赖：{module_dependency}"
-                    f"\n - 状态：{'已' if module.installed else '未'}安装"
+                    f"\n - 状态：{'已' if module.loaded else '未'}安装"
                     f"{switch_status}"
                 ),
             )
@@ -361,7 +367,7 @@ async def install_module(
         msg = []
         cache_dir = Path(__file__).parent.parent / "__cache__"
         if is_dependency:
-            cache_dir = cache_dir / "__dependency__"
+            cache_dir = cache_dir / f"__dependency_{name}__"
         module_dir = Path(__file__).parent.parent
         try:
             if not is_dependency:
@@ -421,9 +427,8 @@ async def install_module(
                     break
             with saya.module_context():
                 saya.require(module.pack)
-                if module.db:
-                    await db_init()
-            module.installed = True
+                await db_init()
+            module.loaded = True
             add_module_index(module)
             msg.append(f"成功安装插件 {name}\n已安装版本：{module.version}")
         except Exception as e:
@@ -443,10 +448,9 @@ async def load_module(name: str) -> MessageChain:
         try:
             with saya.module_context():
                 saya.require(module.pack)
-                if module.db:
-                    await db_init()
+                await db_init()
                 saya.require(module.pack)
-            module.installed = True
+            module.loaded = True
             return MessageChain(f"已加载插件 {name}")
         except Exception as e:
             return MessageChain(f"加载插件 {name} 时发生错误：\n{e}")
@@ -457,7 +461,11 @@ async def unload_module(name: str) -> MessageChain:
     reload_metadata()
     if module := get_module(name):
         if chn := saya.channels.get(module.pack, None):
-            module.installed = False
+            if isinstance(module.override_default, bool):
+                return MessageChain(
+                    f"无法更改插件 {name} 的状态，插件状态固定为 {module.override_default}"
+                )
+            module.loaded = False
             saya.uninstall_channel(chn)
             return MessageChain(f"已卸载插件 {name}")
     return MessageChain(f"无法找到插件 {name}")
@@ -468,14 +476,14 @@ async def reload_module(name: str) -> MessageChain:
     return await load_module(name)
 
 
-async def upgrade_module() -> MessageChain:
+async def upgrade_module(force: bool = False) -> MessageChain:
     reload_metadata()
     from module import __all__
 
     msg = []
     for mod in list(__all__):
         if modules := await hs.search_module(name=mod.pack):
-            if modules[0].version == mod.version:
+            if modules[0].version == mod.version and not force:
                 continue
             msg.append(
                 await install_module(
@@ -514,9 +522,9 @@ def reload_metadata() -> NoReturn:
             enabled.append(_mod)
             continue
         enabled.append(
-            Module(name=mod.split(".", maxsplit=1)[-1], pack=mod, installed=True)
+            Module(name=mod.split(".", maxsplit=1)[-1], pack=mod, loaded=True)
         )
-    disabled = list(filter(lambda x: not x.installed, __all__))
+    disabled = list(filter(lambda x: not x.loaded, __all__))
     for path in Path(__file__).parent.parent.iterdir():
         if (
             path.name.startswith("_")
@@ -525,7 +533,7 @@ def reload_metadata() -> NoReturn:
         ):
             continue
         disabled.append(
-            Module(name=path.stem, pack=f"module.{path.stem}", installed=False)
+            Module(name=path.stem, pack=f"module.{path.stem}", loaded=False)
         )
     __all__.clear()
     for mod in enabled + disabled:
