@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import NoReturn
 
 from graia.ariadne import get_running, Ariadne
@@ -8,6 +9,7 @@ from graia.broadcast.builtin.decorators import Depend
 
 from library.config import config, get_switch
 from library.model import UserPerm
+from library.orm import orm, FunctionCallRecord
 
 
 class Permission:
@@ -68,3 +70,26 @@ class Switch:
                 raise
 
         return Depend(switch_check)
+
+
+class FunctionCall:
+    @classmethod
+    def record(cls, pack: str) -> Depend:
+        async def function_call_record(event: MessageEvent) -> NoReturn:
+            await cls.add_record(pack, event)
+
+        return Depend(function_call_record)
+
+    @staticmethod
+    async def add_record(pack: str, event: MessageEvent) -> NoReturn:
+        await orm.add(
+            FunctionCallRecord,
+            {
+                "time": datetime.now(),
+                "field": event.sender.group.id
+                if isinstance(event, GroupMessage)
+                else 0,
+                "supplicant": event.sender.id,
+                "function": pack,
+            },
+        )

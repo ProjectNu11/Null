@@ -1,6 +1,5 @@
 import json
 import os
-from json import JSONDecodeError
 from pathlib import Path
 from typing import List, NoReturn, Union
 
@@ -45,7 +44,7 @@ def read_and_update_metadata(file: Path, is_dir: bool = False) -> Module:
 
 def write_metadata(file: Path, module: Module) -> NoReturn:
     with file.open("w", encoding="utf-8") as f:
-        f.write(module.json(exclude={"installed"}, indent=4, ensure_ascii=False))
+        f.write(module.json(indent=4, ensure_ascii=False))
 
 
 def load_metadata() -> List[Module]:

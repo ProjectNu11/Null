@@ -1,7 +1,18 @@
 from asyncio import Lock
 from typing import NoReturn
 
-from sqlalchemy import select, update, insert, delete, inspect
+from sqlalchemy import (
+    select,
+    update,
+    insert,
+    delete,
+    inspect,
+    Column,
+    DateTime,
+    Integer,
+    BIGINT,
+    String,
+)
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -127,3 +138,15 @@ class AsyncORM(AsyncEngine):
 
 orm = AsyncORM(config.db.link)
 Base = orm.Base
+
+
+class FunctionCallRecord(Base):
+    """功能调用记录"""
+
+    __tablename__ = "function_call_record"
+
+    id = Column(Integer, primary_key=True)
+    time = Column(DateTime, nullable=False)
+    field = Column(BIGINT, nullable=False)
+    supplicant = Column(BIGINT, nullable=False)
+    function = Column(String(length=4000), nullable=False)
