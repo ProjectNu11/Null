@@ -6,8 +6,9 @@
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "db": false,
     "category": "utility",
     "description": "",
-    "dependency": null
+    "dependency": null,
+    "loaded": true,
+    "override_default": true
 }

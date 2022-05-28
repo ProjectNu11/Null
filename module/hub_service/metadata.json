@@ -1,13 +1,14 @@
 {
     "name": "中心服务",
     "pack": "module.hub_service",
-    "version": "0.0",
+    "version": "0.1b",
     "author": [
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "db": false,
     "category": "utility",
     "description": "",
-    "dependency": null
+    "dependency": null,
+    "loaded": true,
+    "override_default": true
 }
