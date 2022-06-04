@@ -13,6 +13,8 @@ graia-scheduler = "^0.0.7"
 requests = "^2.27.1"
 SQLAlchemy = "^1.4.37"
 aiohttp = "^3.8.1"
+aiomysql = "^0.1.1"
+aiosqlite = "^0.17.0"
 
 [tool.poetry.dev-dependencies]
 
