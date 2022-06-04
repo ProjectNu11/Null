@@ -161,7 +161,7 @@ class HubService:
             )
 
             if isinstance(pypi, bool):
-                param.append(f"pypi={pypi}")
+                params.append(f"pypi={pypi}")
             params = f"?{'&'.join(params)}"
         async with get_running(Adapter).session.get(
             url=config.hub.url + config.hub.metadata.search_module + params,

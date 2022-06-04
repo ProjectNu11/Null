@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "Project-Null"
+version = "0.1.0"
+description = "Another modular bot"
+authors = ["nullqwertyuiop"]
+license = "AGPL-3.0 license"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+graia-ariadne = "^0.6.16"
+graia-saya = "^0.0.15"
+graia-scheduler = "^0.0.7"
+requests = "^2.27.1"
+SQLAlchemy = "^1.4.37"
+aiohttp = "^3.8.1"
+aiomysql = "^0.1.1"
+aiosqlite = "^0.17.0"
+
+[tool.poetry.dev-dependencies]
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
