@@ -8,6 +8,7 @@ from loguru import logger
 
 import module
 from library.config import config
+from library.util.dependency import install_dependency
 
 if __name__ == """__main__""":
     ariadne = Ariadne(
@@ -25,6 +26,12 @@ if __name__ == """__main__""":
                 continue
             try:
                 saya.require(mod.pack)
+            except ModuleNotFoundError:
+                install_dependency(mod)
+                try:
+                    saya.require(mod.pack)
+                except Exception as e:
+                    logger.error(e)
             except Exception as e:
                 logger.error(e)
     ariadne.launch_blocking()
