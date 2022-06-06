@@ -16,7 +16,7 @@ from graia.scheduler.saya import SchedulerSchema
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 
-from module.hub_service.hub_service import hs
+from .hub_service import hs
 
 saya = Saya.current()
 channel = Channel.current()

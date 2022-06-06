@@ -22,13 +22,13 @@ from graia.ariadne.message.parser.twilight import (
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from loguru import logger
-from pip import main as pip
 from sqlalchemy.exc import InternalError, ProgrammingError
 
 from library.config import config, get_switch, update_switch, reload_config
 from library.depend import Permission, FunctionCall
 from library.model import UserPerm, Module
 from library.orm import orm
+from library.util.dependency import install_dependency
 from module import (
     remove_module_index,
     read_and_update_metadata,
@@ -57,7 +57,7 @@ channel.description("")
         inline_dispatchers=[
             Twilight(
                 [
-                    UnionMatch(".plugin", "插件"),
+                    UnionMatch(".plugin", "插件").help('以 ".plugin" 或 "插件" 开头'),
                     UnionMatch(
                         "install",
                         "uninstall",
@@ -73,13 +73,26 @@ channel.description("")
                         "卸载",
                         "搜索",
                         "升级",
+                    ).help(
+                        '功能可选择 "install" "安装" '
+                        '"uninstall" "删除" "load" "加载" '
+                        '"reload" "重载" "unload" "卸载"'
+                        '"search" "搜索" "upgrade" "升级"'
                     )
                     @ "function",
-                    UnionMatch("-u", "--upgrade", optional=True) @ "upgrade",
-                    UnionMatch("-f", "--force", optional=True) @ "force",
+                    ArgumentMatch(
+                        "-u", "--upgrade", action="store_true", optional=True
+                    ).help("升级插件，安装插件时可选")
+                    @ "upgrade",
+                    ArgumentMatch(
+                        "-f", "--force", action="store_true", optional=True
+                    ).help("强制模式，安装或升级插件时可选")
+                    @ "force",
                     WildcardMatch(optional=True) @ "name",
-                    ArgumentMatch("-c", "--category", optional=True) @ "category",
-                    ArgumentMatch("-a", "--author", optional=True) @ "author",
+                    ArgumentMatch("-c", "--category", optional=True).help("搜索的插件类别")
+                    @ "category",
+                    ArgumentMatch("-a", "--author", optional=True).help("搜索的插件作者")
+                    @ "author",
                 ]
             )
         ],
@@ -393,15 +406,11 @@ async def install_module(
                     ):
                         continue
                     module = read_and_update_metadata(path, path.is_dir())
-                    if module.pypi:
-                        await loop.run_in_executor(
-                            None,
-                            pip,
-                            [
-                                "install",
-                                "-r",
-                                str(path / "requirements.txt"),
-                            ],
+                    if module.pypi and Path(path, "requirements.txt").is_file():
+                        install_dependency(
+                            requirements=Path(path, "requirements.txt")
+                            .read_text()
+                            .splitlines()
                         )
                     if module.dependency:
                         for dependency in module.dependency:

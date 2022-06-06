@@ -108,6 +108,7 @@ class Config(BaseModel):
     name: str = ""
     num: int = 0
     account: int = 0
+    env: str = ""
     host: AnyHttpUrl = ""
     verify_key: str = ""
     dev_group: List[int] = []
@@ -121,6 +122,11 @@ class Config(BaseModel):
     @validator("name", "account", "verify_key")
     def config_check(cls, value):
         assert value, "empty field found"
+        return value
+
+    @validator("env")
+    def env_check(cls, value):
+        assert value in ["pip", "poetry"], "env must be pip or poetry"
         return value
 
 
