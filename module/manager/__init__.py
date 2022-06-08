@@ -1,7 +1,3 @@
-import asyncio
-import os
-import shutil
-from asyncio import Lock
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import NoReturn, Union, List
@@ -21,20 +17,15 @@ from graia.ariadne.message.parser.twilight import (
 )
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
-from loguru import logger
-from sqlalchemy.exc import InternalError, ProgrammingError
 
 from library.config import config, get_switch, update_switch, reload_config
 from library.depend import Permission, FunctionCall
 from library.model import UserPerm, Module
-from library.orm import orm
-from library.util.dependency import install_dependency
 from module import (
-    remove_module_index,
-    read_and_update_metadata,
     get_module,
-    add_module_index,
 )
+from .module.install import install_module
+from .util import db_init
 
 try:
     from module.hub_service.exception import HubServiceNotEnabled
@@ -44,7 +35,6 @@ except HubServiceNotEnabled:
 
 saya = Saya.current()
 channel = Channel.current()
-install_lock = Lock()
 
 channel.name("ModuleManager")
 channel.author("nullqwertyuiop")
@@ -363,94 +353,6 @@ async def list_module(group: int = None) -> MessageChain:
     return MessageChain.create([Forward(nodeList=fwd_node_list)])
 
 
-async def install_module(
-    name: str,
-    upgrade: bool,
-    version: str = "",
-    *,
-    is_dependency: bool = False,
-) -> Union[str, MessageChain]:
-    if module := get_module(name):
-        if not upgrade:
-            return MessageChain(f"已安装插件 {name}，将不会作出改动\n已安装版本：{module.version}")
-        elif chn := saya.channels.get(module.pack, None):
-            remove_module_index(module.pack)
-            saya.uninstall_channel(chn)
-    if data_bytes := await hs.download_module(name=name, version=version):
-        msg = []
-        cache_dir = Path(__file__).parent.parent / "__cache__"
-        if is_dependency:
-            cache_dir = cache_dir / f"__dependency_{name}__"
-        module_dir = Path(__file__).parent.parent
-        try:
-            if not is_dependency:
-                await install_lock.acquire()
-            cache_dir.mkdir(exist_ok=True)
-            with (cache_dir / f"{name}.zip").open("wb") as f:
-                f.write(data_bytes)
-            loop = asyncio.get_event_loop()
-            await loop.run_in_executor(
-                None,
-                shutil.unpack_archive,
-                cache_dir / f"{name}.zip",
-                cache_dir,
-            )
-            (cache_dir / f"{name}.zip").unlink(missing_ok=True)
-            ignore_list = ["README.md", "LICENSE", "metadata.json"]
-            for path in cache_dir.iterdir():
-                if path.is_dir():
-                    if (
-                        path.stem.startswith("_")
-                        or path.name in ignore_list
-                        or path.name.startswith(".")
-                    ):
-                        continue
-                    module = read_and_update_metadata(path, path.is_dir())
-                    if module.pypi and Path(path, "requirements.txt").is_file():
-                        install_dependency(
-                            requirements=Path(path, "requirements.txt")
-                            .read_text()
-                            .splitlines()
-                        )
-                    if module.dependency:
-                        for dependency in module.dependency:
-                            logger.info(f"Installing dependency: {dependency}")
-                            msg.append(
-                                await install_module(
-                                    dependency,
-                                    upgrade=True,
-                                    is_dependency=True,
-                                )
-                            )
-                    path_name = path.name.replace("-", "_").strip("_")
-                    if path.name != path_name:
-                        os.rename(path, path.parent / path_name)
-                    if (module_dir / path_name).is_file():
-                        (module_dir / path_name).unlink(missing_ok=True)
-                    elif (module_dir / path_name).is_dir():
-                        shutil.rmtree(module_dir / path_name)
-                    shutil.move(
-                        os.path.join(path.parent / path_name),
-                        os.path.join(module_dir),
-                    )
-                    break
-            with saya.module_context():
-                saya.require(module.pack)
-                await db_init()
-            module.loaded = True
-            add_module_index(module)
-            msg.append(f"成功安装插件 {name}\n已安装版本：{module.version}")
-        except Exception as e:
-            msg.append(f"安装插件 {name} 时发生错误：\n{e}")
-        finally:
-            shutil.rmtree(cache_dir)
-            if not is_dependency:
-                install_lock.release()
-            text = "\n===============\n".join(msg)
-            return text if is_dependency else MessageChain(text)
-    return "无法找到符合要求的插件" if is_dependency else MessageChain("无法找到符合要求的插件")
-
-
 async def load_module(name: str) -> MessageChain:
     reload_metadata()
     if module := get_module(name):
@@ -547,13 +449,6 @@ def reload_metadata() -> NoReturn:
     __all__.clear()
     for mod in enabled + disabled:
         __all__.append(mod)
-
-
-async def db_init():
-    try:
-        await orm.init_check()
-    except (AttributeError, InternalError, ProgrammingError):
-        await orm.create_all()
 
 
 @channel.use(ListenerSchema(listening_events=[ApplicationLaunched]))

@@ -1,6 +1,7 @@
+import asyncio
 import subprocess
 from pathlib import Path
-from typing import List
+from typing import List, NoReturn
 
 from loguru import logger
 
@@ -8,7 +9,9 @@ from library.config import config
 from library.model import Module
 
 
-def install_dependency(module: Module = None, requirements: List[str] = None):
+def install_dependency(
+    module: Module = None, requirements: List[str] = None
+) -> NoReturn:
     if not module and not requirements:
         raise ValueError("module or requirements must be filled")
     if module:
@@ -29,3 +32,10 @@ def install_dependency(module: Module = None, requirements: List[str] = None):
         logger.info(info)
     if err := stderr.decode("utf-8"):
         logger.error(err)
+
+
+async def async_install_dependency(
+    module: Module = None, requirements: List[str] = None
+) -> NoReturn:
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, install_dependency, module, requirements)
