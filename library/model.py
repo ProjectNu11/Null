@@ -114,6 +114,7 @@ class Config(BaseModel):
     dev_group: List[int] = []
     owners: List[int] = []
     proxy: str = None
+    log_retention: Union[None, int] = 7
     db: DatabaseConfig = DatabaseConfig()
     func: FunctionConfig = FunctionConfig()
     path: PathConfig = PathConfig()
