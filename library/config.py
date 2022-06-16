@@ -68,7 +68,7 @@ def get_switch(pack: str, group: Union[Group, int, str]) -> Union[None, bool]:
     elif isinstance(group, int):
         group = str(group)
     if module := switch.get(pack, None):
-        return module.get(group, False)
+        return module.get(group, None)
     return None
 
 

@@ -6,6 +6,7 @@ from graia.ariadne.event.message import MessageEvent, GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.broadcast import ExecutionStop
 from graia.broadcast.builtin.decorators import Depend
+from loguru import logger
 
 from library.config import config, get_switch
 from library.model import UserPerm
@@ -44,19 +45,31 @@ class Permission:
 class Switch:
     @staticmethod
     def check(
-        pack: str, override_level: UserPerm = None, on_failure: MessageChain = None
+        pack: str,
+        override_level: UserPerm = None,
+        on_failure: MessageChain = None,
+        log: bool = True,
     ) -> Depend:
         async def switch_check(event: MessageEvent) -> NoReturn:
             if override_level and Permission.permission_check(override_level, event):
+                if log:
+                    logger.success(f"[Switch] {pack}: Overridden by {override_level}")
                 return
             try:
                 value = get_switch(
-                    pack, event.sender.group if isinstance(event, GroupMessage) else 0
+                    pack,
+                    event.sender.group if isinstance(event, GroupMessage) else None,
                 )
                 if isinstance(value, bool):
+                    if log:
+                        logger.success(f"[Switch] {pack}: {value}")
                     if not value:
                         raise ExecutionStop
                     return
+                if log:
+                    logger.success(
+                        f"[Switch] {pack}: Fallback to {config.func.default}"
+                    )
                 if not config.func.default:
                     raise ExecutionStop
             except ExecutionStop:
