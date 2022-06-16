@@ -7,7 +7,7 @@ license = "AGPL-3.0 license"
 
 [tool.poetry.dependencies]
 python = "^3.8"
-graia-ariadne = "^0.6.16"
+graia-ariadne = "^0.7.8"
 graia-saya = "^0.0.15"
 graia-scheduler = "^0.0.7"
 requests = "^2.27.1"

@@ -1,5 +1,9 @@
 from graia.ariadne.app import Ariadne
-from graia.ariadne.model import MiraiSession
+from graia.ariadne.connection.config import (
+    HttpClientConfig,
+    WebsocketClientConfig,
+    config as ariadne_config,
+)
 from graia.saya import Saya
 from graia.saya.builtins.broadcast import BroadcastBehaviour
 from graia.scheduler import GraiaScheduler
@@ -12,7 +16,12 @@ from library.util.dependency import install_dependency
 
 if __name__ == """__main__""":
     ariadne = Ariadne(
-        MiraiSession(**config.dict(include={"host", "account", "verify_key"}))
+        connection=ariadne_config(
+            config.account,
+            config.verify_key,
+            HttpClientConfig(host=config.host),
+            WebsocketClientConfig(host=config.host),
+        )
     )
     saya = ariadne.create(Saya)
     ariadne.create(GraiaScheduler)

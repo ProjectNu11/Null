@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import NoReturn
 
-from graia.ariadne import get_running, Ariadne
+from graia.ariadne import Ariadne
 from graia.ariadne.event.message import MessageEvent, GroupMessage
 from graia.ariadne.message.chain import MessageChain
 from graia.broadcast import ExecutionStop
@@ -18,11 +18,11 @@ class Permission:
         async def perm_check(event: MessageEvent) -> NoReturn:
             if not cls.permission_check(permission, event):
                 if on_failure:
-                    await get_running(Ariadne).sendMessage(
+                    await Ariadne.current().send_message(
                         event.sender.group
                         if isinstance(event, GroupMessage)
                         else event.sender,
-                        on_failure.asSendable(),
+                        on_failure.as_sendable(),
                     )
                 raise ExecutionStop
 
@@ -61,11 +61,11 @@ class Switch:
                     raise ExecutionStop
             except ExecutionStop:
                 if on_failure:
-                    await get_running(Ariadne).sendMessage(
+                    await Ariadne.current().send_message(
                         event.sender.group
                         if isinstance(event, GroupMessage)
                         else event.sender,
-                        on_failure.asSendable(),
+                        on_failure.as_sendable(),
                     )
                 raise
 

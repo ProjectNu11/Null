@@ -9,7 +9,7 @@ import requests
 import urllib.parse
 from typing import Literal, List, Union
 from aiohttp import ClientResponseError
-from graia.ariadne import get_running, Ariadne
+from graia.ariadne import Ariadne
 from graia.ariadne.exception import AccountMuted, UnknownTarget
 from graia.ariadne.message.chain import MessageChain
 
@@ -90,9 +90,9 @@ class HubService:
             url=config.hub.url + config.hub.metadata.heartbeat, headers=self.__auth__
         ) as resp:
             if bots := await resp.json():
-                ariadne = get_running(Ariadne)
-                group_list = [g.id for g in await ariadne.getGroupList()]
-                friend_list = [f.id for f in await ariadne.getFriendList()]
+                ariadne = Ariadne.current()
+                group_list = [g.id for g in await ariadne.get_group_list()]
+                friend_list = [f.id for f in await ariadne.get_friendList()]
                 for bot in bots:
                     if self.notify_missing(bot, group_list, friend_list):
                         await self.notified_missing(bot["id"])
@@ -101,7 +101,7 @@ class HubService:
     async def notify_missing(
         bot: dict, group_list: List[int], friend_list: List[int]
     ) -> bool:
-        ariadne = get_running(Ariadne)
+        ariadne = Ariadne.current()
         dev_group = bot["devGroup"]
         owner = bot["owners"]
         target_group_list = [group for group in group_list if group in dev_group]
@@ -109,7 +109,7 @@ class HubService:
         notified = False
         for group in target_group_list:
             try:
-                await ariadne.sendGroupMessage(
+                await ariadne.send_group_message(
                     group, MessageChain(f"{bot['name']}#{bot['num']} ({bot['id']}) 已离线")
                 )
                 notified = True
@@ -117,7 +117,7 @@ class HubService:
                 continue
         for friend in target_friend_list:
             try:
-                await ariadne.sendFriendMessage(
+                await ariadne.send_friend_message(
                     friend,
                     MessageChain(f"{bot['name']}#{bot['num']} ({bot['id']}) 已离线"),
                 )

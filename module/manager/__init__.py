@@ -21,9 +21,7 @@ from graia.saya.builtins.broadcast import ListenerSchema
 from library.config import config, get_switch, update_switch, reload_config
 from library.depend import Permission, FunctionCall
 from library.model import UserPerm, Module
-from module import (
-    get_module,
-)
+from module import get_module
 from .module.install import install_module
 from .util import db_init
 
@@ -104,9 +102,9 @@ async def module_manager_owner(
     category: ArgResult,
     author: ArgResult,
 ):
-    function: str = function.result.asDisplay()
+    function: str = function.result.display
     if not hs and function in {"install", "search", "upgrade", "安装", "搜索", "升级"}:
-        return await app.sendMessage(
+        return await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender,
             MessageChain(f"HubService 未启用，无法使用 {function}"),
         )
@@ -121,7 +119,7 @@ async def module_manager_owner(
     elif function in {"install", "安装"}:
         name = name.split()
         for mod_name in name:
-            await app.sendMessage(
+            await app.send_message(
                 event.sender.group if isinstance(event, GroupMessage) else event.sender,
                 await install_module(name=mod_name, upgrade=upgrade, version=""),
             )
@@ -137,7 +135,7 @@ async def module_manager_owner(
     elif function in {"upgrade", "升级"}:
         msg = await upgrade_module(force)
     if msg:
-        await app.sendMessage(
+        await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
         )
 
@@ -169,8 +167,8 @@ async def module_manager_owner(
 async def module_manager_admin(
     app: Ariadne, event: MessageEvent, func: MatchResult, param: MatchResult
 ):
-    func = func.result.asDisplay()
-    param = param.result.asDisplay().strip().split()
+    func = func.result.display
+    param = param.result.display.strip().split()
     msg = None
     if func in ("list", "枚举"):
         msg = await list_module(
@@ -184,7 +182,7 @@ async def module_manager_admin(
         )
 
     if msg:
-        await app.sendMessage(
+        await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
         )
 
@@ -213,8 +211,8 @@ async def module_manager_admin(
 async def config_manager_admin(
     app: Ariadne, event: MessageEvent, func: MatchResult, param: MatchResult
 ):
-    func = func.result.asDisplay()
-    # param = param.result.asDisplay().strip().split()
+    func = func.result.display
+    # param = param.result.display.strip().split()
     msg = None
     if func in ("view", "查看"):
         # TODO add view_module
@@ -226,7 +224,7 @@ async def config_manager_admin(
         reload_config()
         msg = MessageChain("成功重载配置")
     if msg:
-        await app.sendMessage(
+        await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
         )
 
@@ -290,7 +288,7 @@ async def search(name: str, category: str, author: str) -> MessageChain:
                 ),
             )
         ]
-    return MessageChain.create([Forward(nodeList=fwd_node_list)])
+    return MessageChain([Forward(fwd_node_list)])
 
 
 async def list_module(group: int = None) -> MessageChain:
@@ -305,7 +303,7 @@ async def list_module(group: int = None) -> MessageChain:
             target=config.account,
             name=f"{config.name}#{config.num}",
             time=datetime.now(),
-            message=MessageChain.create(
+            message=MessageChain(
                 [
                     Plain(text=f"已安装 {len(modules)} 个插件"),
                     Plain(text="\n==============="),
@@ -338,19 +336,21 @@ async def list_module(group: int = None) -> MessageChain:
                 name=f"{config.name}#{config.num}",
                 time=datetime.now() + timedelta(seconds=15) * (index + 1),
                 message=MessageChain(
-                    f"{index + 1}. {module.name}"
-                    f"\n - 包名：{module.pack}"
-                    f"\n - 版本：{module.version}"
-                    f"\n - 作者：{', '.join(module.author)}"
-                    f"\n - 分类：{module_category}"
-                    f"\n - 描述：{module.description}"
-                    f"\n - 依赖：{module_dependency}"
-                    f"\n - 状态：{'已' if module.loaded else '未'}安装"
-                    f"{switch_status}"
+                    [
+                        Plain(f"{index + 1}. {module.name}"),
+                        Plain(f"\n - 包名：{module.pack}"),
+                        Plain(f"\n - 版本：{module.version}"),
+                        Plain(f"\n - 作者：{', '.join(module.author)}"),
+                        Plain(f"\n - 分类：{module_category}"),
+                        Plain(f"\n - 描述：{module.description}"),
+                        Plain(f"\n - 依赖：{module_dependency}"),
+                        Plain(f"\n - 状态：{'已' if module.loaded else '未'}安装"),
+                        Plain(f"{switch_status}") if module.loaded else None,
+                    ]
                 ),
             )
         )
-    return MessageChain.create([Forward(nodeList=fwd_node_list)])
+    return MessageChain([Forward(fwd_node_list)])
 
 
 async def load_module(name: str) -> MessageChain:
@@ -419,7 +419,7 @@ async def upgrade_module(force: bool = False) -> MessageChain:
             )
             for index, msg_chain in enumerate(msg)
         ]
-        return MessageChain.create([Forward(nodeList=fwd_node_list)])
+        return MessageChain([Forward(fwd_node_list)])
     return MessageChain("暂无更新可用")
 
 
