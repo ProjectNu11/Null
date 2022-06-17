@@ -1,6 +1,8 @@
 import asyncio
+import contextlib
 import os
 import shutil
+import traceback
 from asyncio import Lock
 from pathlib import Path
 from typing import Union, List, NoReturn, Optional
@@ -17,6 +19,7 @@ from module import (
     read_and_update_metadata,
     add_module_index,
 )
+from .uninstall import uninstall_module
 from ..util import db_init
 
 try:
@@ -28,7 +31,7 @@ except HubServiceNotEnabled:
 saya = Saya.current()
 
 install_lock = Lock()
-module_dir = Path(__file__).parent.parent
+module_dir = Path(Path().resolve(), "module")
 
 
 async def install_module(
@@ -43,9 +46,9 @@ async def install_module(
     if not (data_bytes := await hs.download_module(name=name, version=version)):
         return "无法找到符合要求的插件" if is_dependency else MessageChain("无法找到符合要求的插件")
     msg = []
-    cache_dir = Path(__file__).parent.parent / "__cache__"
+    cache_dir = Path(Path(__file__).parent.parent, "__cache__")
     if is_dependency:
-        cache_dir = cache_dir / f"__dependency_{name}__"
+        cache_dir = Path(cache_dir, f"__dependency_{name}__")
     try:
         if not is_dependency:
             await install_lock.acquire()
@@ -55,6 +58,7 @@ async def install_module(
         msg.append(f"成功安装插件 {name}\n已安装版本：{module.version}")
     except Exception as e:
         msg.append(f"安装插件 {name} 时发生错误：\n{e}")
+        logger.error(traceback.format_exc())
     finally:
         shutil.rmtree(cache_dir)
         if not is_dependency:
@@ -76,13 +80,13 @@ async def pre_installation(name: str, upgrade: bool) -> Optional[MessageChain]:
 
 def prepare_cache(cache_dir: Path, name: str, data: bytes) -> NoReturn:
     cache_dir.mkdir(exist_ok=True)
-    with (cache_dir / f"{name}.zip").open("wb") as f:
+    with Path(cache_dir, f"{name}.zip").open("wb") as f:
         f.write(data)
     shutil.unpack_archive(
-        cache_dir / f"{name}.zip",
+        Path(cache_dir, f"{name}.zip"),
         cache_dir,
     )
-    (cache_dir / f"{name}.zip").unlink(missing_ok=True)
+    Path(cache_dir, f"{name}.zip").unlink(missing_ok=True)
 
 
 async def async_prepare_cache(cache_dir: Path, name: str, data: bytes) -> NoReturn:
@@ -91,7 +95,6 @@ async def async_prepare_cache(cache_dir: Path, name: str, data: bytes) -> NoRetu
 
 
 async def find_and_install(cache_dir: Path) -> Module:
-    loop = asyncio.get_event_loop()
     for path in cache_dir.iterdir():
         if path.is_dir():
             if (
@@ -102,7 +105,7 @@ async def find_and_install(cache_dir: Path) -> Module:
                 continue
             module = read_and_update_metadata(path, path.is_dir())
             await resolve_dependency(module, path)
-            await loop.run_in_executor(None, move_module, path)
+            await async_move_module(path)
             return module
 
 
@@ -128,13 +131,11 @@ async def resolve_dependency(module: Module, path: Path) -> List[str]:
 def move_module(path: Path) -> NoReturn:
     path_name = path.name.replace("-", "_").strip("_")
     if path.name != path_name:
-        os.rename(path, path.parent / path_name)
-    if (module_dir / path_name).is_file():
-        (module_dir / path_name).unlink(missing_ok=True)
-    elif (module_dir / path_name).is_dir():
-        shutil.rmtree(module_dir / path_name)
+        os.rename(path, Path(path.parent, path_name))
+    with contextlib.suppress(FileNotFoundError):
+        uninstall_module(path=Path(module_dir, path_name))
     shutil.move(
-        os.path.join(path.parent / path_name),
+        os.path.join(Path(path.parent, path_name)),
         os.path.join(module_dir),
     )
 

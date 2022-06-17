@@ -345,7 +345,7 @@ async def list_module(group: int = None) -> MessageChain:
                         Plain(f"\n - 描述：{module.description}"),
                         Plain(f"\n - 依赖：{module_dependency}"),
                         Plain(f"\n - 状态：{'已' if module.loaded else '未'}安装"),
-                        Plain(f"{switch_status}") if module.loaded else None,
+                        Plain(f"{switch_status}" if module.loaded else ""),
                     ]
                 ),
             )
