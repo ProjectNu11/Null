@@ -13,12 +13,7 @@ from loguru import logger
 
 from library.model import Module
 from library.util.dependency import async_install_dependency
-from module import (
-    get_module,
-    remove_module_index,
-    read_and_update_metadata,
-    add_module_index,
-)
+from module import modules, ModuleMetadata
 from .uninstall import uninstall_module
 from ..util import db_init
 
@@ -68,12 +63,12 @@ async def install_module(
 
 
 async def pre_installation(name: str, upgrade: bool) -> Optional[MessageChain]:
-    if not (module := get_module(name)):
+    if not (module := modules.get_module(name)):
         return
     if not upgrade:
         return MessageChain(f"已安装插件 {name}，将不会作出改动\n已安装版本：{module.version}")
     if chn := saya.channels.get(module.pack, None):
-        remove_module_index(module.pack)
+        modules.remove_module(module.pack)
         saya.uninstall_channel(chn)
         return
 
@@ -103,7 +98,7 @@ async def find_and_install(cache_dir: Path) -> Module:
                 or path.name.startswith(".")
             ):
                 continue
-            module = read_and_update_metadata(path, path.is_dir())
+            module = ModuleMetadata.read_and_update_metadata(path, path.is_dir())
             await resolve_dependency(module, path)
             await async_move_module(path)
             return module
@@ -150,4 +145,4 @@ async def post_installation(module: Module) -> NoReturn:
         saya.require(module.pack)
         await db_init()
     module.loaded = True
-    add_module_index(module)
+    modules.add_module(module)

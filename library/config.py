@@ -49,41 +49,46 @@ def update_module_config(module: str, cfg: Union[dict, BaseModel] = None):
     save_config(config)
 
 
-def read_switch() -> Dict[str, Dict[str, bool]]:
-    if not (config.path.data / "switch.json").is_file():
-        write_switch({})
-        return {}
-    with (config.path.data / "switch.json").open("r", encoding="utf-8") as f:
-        return json.loads(f.read())
+class Switch:
+    __switch: dict = Dict[str, Dict[str, bool]]
 
+    def __init__(self):
+        self.load()
 
-def write_switch(s: Dict[str, Dict[str, bool]]) -> NoReturn:
-    with (config.path.data / "switch.json").open("w", encoding="utf-8") as f:
-        f.write(json.dumps(s, indent=4, ensure_ascii=False))
+    def load(self) -> NoReturn:
+        if not Path(config.path.data, "switch.json").is_file():
+            self.write()
+            self.__switch = {}
+        with Path(config.path.data, "switch.json").open("r", encoding="utf-8") as f:
+            self.__switch = json.loads(f.read())
 
+    def write(self) -> NoReturn:
+        with Path(config.path.data, "switch.json").open("w", encoding="utf-8") as f:
+            f.write(json.dumps(self.__switch, indent=4, ensure_ascii=False))
 
-def get_switch(pack: str, group: Union[Group, int, str]) -> Union[None, bool]:
-    if isinstance(group, Group):
-        group = str(group.id)
-    elif isinstance(group, int):
-        group = str(group)
-    if module := switch.get(pack, None):
-        return module.get(group, None)
-    return None
+    def get(self, pack: str, group: Union[Group, int, str, None]) -> Union[None, bool]:
+        if isinstance(group, Group):
+            group = str(group.id)
+        elif isinstance(group, int):
+            group = str(group)
+        elif group is None:
+            group = "0"
+        if module := self.__switch.get(pack, None):
+            return module.get(group, None)
+        return None
 
-
-def update_switch(pack: str, group: Union[Group, int, str], value: bool):
-    if isinstance(group, Group):
-        group = str(group.id)
-    elif isinstance(group, int):
-        group = str(group)
-    if pack in switch.keys():
-        switch[pack][group] = value
-        write_switch(switch)
+    def update(self, pack: str, group: Union[Group, int, str], value: bool):
+        if isinstance(group, Group):
+            group = str(group.id)
+        elif isinstance(group, int):
+            group = str(group)
+        if pack in self.__switch.keys():
+            self.__switch[pack][group] = value
+            self.write()
+            return
+        self.__switch[pack] = {group: value}
+        self.write()
         return
-    switch[pack] = {group: value}
-    write_switch(switch)
-    return
 
 
-switch: dict = read_switch()
+switch = Switch()

@@ -1,5 +1,4 @@
 from datetime import datetime, timedelta
-from pathlib import Path
 from typing import NoReturn, Union, List
 
 from graia.ariadne import Ariadne
@@ -18,10 +17,10 @@ from graia.ariadne.message.parser.twilight import (
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 
-from library.config import config, get_switch, update_switch, reload_config
+from library.config import config, switch, reload_config
 from library.depend import Permission, FunctionCall
-from library.model import UserPerm, Module
-from module import get_module
+from library.model import UserPerm
+from module import modules as __modules
 from .module.install import install_module
 from .util import db_init
 
@@ -233,11 +232,11 @@ def module_switch(modules: list, group: int, value: bool) -> MessageChain:
     success_count = 0
     failed = []
     for name in modules:
-        if module := get_module(name):
+        if module := __modules.get_module(name):
             if module.pack == channel.module:
                 failed.append(name)
                 continue
-            update_switch(pack=module.pack, group=group, value=value)
+            switch.update(pack=module.pack, group=group, value=value)
             success_count += 1
         else:
             failed.append(name)
@@ -293,11 +292,8 @@ async def search(name: str, category: str, author: str) -> MessageChain:
 
 async def list_module(group: int = None) -> MessageChain:
     reload_metadata()
-
-    from module import __all__ as modules
-
-    enabled = list(filter(lambda x: x.loaded, modules))
-    disabled = list(filter(lambda x: not x.loaded, modules))
+    enabled = list(filter(lambda x: x.loaded, __modules))
+    disabled = list(filter(lambda x: not x.loaded, __modules))
     fwd_node_list = [
         ForwardNode(
             target=config.account,
@@ -305,10 +301,10 @@ async def list_module(group: int = None) -> MessageChain:
             time=datetime.now(),
             message=MessageChain(
                 [
-                    Plain(text=f"已安装 {len(modules)} 个插件"),
+                    Plain(text=f"已安装 {len(__modules)} 个插件"),
                     Plain(text="\n==============="),
-                    Plain(text=f"\n已加载 {len(enabled)} 个插件") if enabled else None,
-                    Plain(text=f"\n未加载 {len(disabled)} 个插件") if disabled else None,
+                    Plain(text=f"\n已加载 {len(enabled)} 个插件") if enabled else Plain(""),
+                    Plain(text=f"\n未加载 {len(disabled)} 个插件") if disabled else Plain(""),
                 ]
             ),
         )
@@ -324,10 +320,10 @@ async def list_module(group: int = None) -> MessageChain:
         module_dependency = ", ".join(module.dependency) if module.dependency else "无"
         if group:
             if module.pack != channel.module:
-                switch = get_switch(module.pack, group) and module.loaded
+                _switch = switch.get(module.pack, group) and module.loaded
             else:
-                switch = True
-            switch_status = f"\n - 开关：{'已' if switch else '未'}开启"
+                _switch = True
+            switch_status = f"\n - 开关：{'已' if _switch else '未'}开启"
         else:
             switch_status = ""
         fwd_node_list.append(
@@ -355,7 +351,7 @@ async def list_module(group: int = None) -> MessageChain:
 
 async def load_module(name: str) -> MessageChain:
     reload_metadata()
-    if module := get_module(name):
+    if module := __modules.get_module(name):
         try:
             with saya.module_context():
                 saya.require(module.pack)
@@ -370,7 +366,7 @@ async def load_module(name: str) -> MessageChain:
 
 async def unload_module(name: str) -> MessageChain:
     reload_metadata()
-    if module := get_module(name):
+    if module := __modules.get_module(name):
         if chn := saya.channels.get(module.pack, None):
             if isinstance(module.override_default, bool):
                 return MessageChain(
@@ -389,10 +385,8 @@ async def reload_module(name: str) -> MessageChain:
 
 async def upgrade_module(force: bool = False) -> MessageChain:
     reload_metadata()
-    from module import __all__
-
     msg = []
-    for mod in list(__all__):
+    for mod in list(__modules):
         if modules := await hs.search_module(name=mod.pack):
             if modules[0].version == mod.version and not force:
                 continue
@@ -424,31 +418,7 @@ async def upgrade_module(force: bool = False) -> MessageChain:
 
 
 def reload_metadata() -> NoReturn:
-    from module import __all__
-
-    saya_modules = list(saya.channels.keys())
-    enabled = []
-    for mod in saya_modules:
-        if _mod := get_module(mod):
-            enabled.append(_mod)
-            continue
-        enabled.append(
-            Module(name=mod.split(".", maxsplit=1)[-1], pack=mod, loaded=True)
-        )
-    disabled = list(filter(lambda x: not x.loaded, __all__))
-    for path in Path(__file__).parent.parent.iterdir():
-        if (
-            path.name.startswith("_")
-            or (path.is_file() and not path.name.endswith(".py"))
-            or f"module.{path.stem}" in [x.pack for x in enabled + disabled]
-        ):
-            continue
-        disabled.append(
-            Module(name=path.stem, pack=f"module.{path.stem}", loaded=False)
-        )
-    __all__.clear()
-    for mod in enabled + disabled:
-        __all__.append(mod)
+    __modules.load_modules(reorder=True)
 
 
 @channel.use(ListenerSchema(listening_events=[ApplicationLaunched]))

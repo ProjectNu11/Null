@@ -8,7 +8,7 @@ from graia.broadcast import ExecutionStop
 from graia.broadcast.builtin.decorators import Depend
 from loguru import logger
 
-from library.config import config, get_switch
+from library.config import config, switch
 from library.model import UserPerm
 from library.orm import orm, FunctionCallRecord
 
@@ -16,6 +16,13 @@ from library.orm import orm, FunctionCallRecord
 class Permission:
     @classmethod
     def require(cls, permission: UserPerm, on_failure: MessageChain = None) -> Depend:
+        """
+        Require user permission.
+        :param permission: User permission.
+        :param on_failure: Message chain to send when user doesn't have permission.
+        :return: Depend decorator.
+        """
+
         async def perm_check(event: MessageEvent) -> NoReturn:
             if not cls.permission_check(permission, event):
                 if on_failure:
@@ -31,6 +38,12 @@ class Permission:
 
     @staticmethod
     def permission_check(permission: UserPerm, event: MessageEvent):
+        """
+        Check user permission.
+        :param permission: User permission.
+        :param event: Message event.
+        :return: True if user has permission, False otherwise.
+        """
         if event.sender.id in config.owners:
             user_perm = UserPerm.BOT_OWNER
         elif isinstance(event, GroupMessage):
@@ -50,15 +63,26 @@ class Switch:
         on_failure: MessageChain = None,
         log: bool = True,
     ) -> Depend:
+        """
+        Check switch.
+        :param pack: Package name.
+        :param override_level: Override user permission.
+        :param on_failure: Message chain to send when switch is off.
+        :param log: Whether to log the call.
+        :return: Depend decorator.
+        """
+
         async def switch_check(event: MessageEvent) -> NoReturn:
             if override_level and Permission.permission_check(override_level, event):
                 if log:
                     logger.success(f"[Switch] {pack}: Overridden by {override_level}")
                 return
             try:
-                value = get_switch(
-                    pack,
-                    event.sender.group if isinstance(event, GroupMessage) else None,
+                value = switch.get(
+                    pack=pack,
+                    group=event.sender.group
+                    if isinstance(event, GroupMessage)
+                    else None,
                 )
                 if isinstance(value, bool):
                     if log:
@@ -88,6 +112,12 @@ class Switch:
 class FunctionCall:
     @classmethod
     def record(cls, pack: str) -> Depend:
+        """
+        Record function call.
+        :param pack: Package name.
+        :return: Depend decorator.
+        """
+
         async def function_call_record(event: MessageEvent) -> NoReturn:
             await cls.add_record(pack, event)
 
@@ -95,6 +125,12 @@ class FunctionCall:
 
     @staticmethod
     async def add_record(pack: str, event: MessageEvent) -> NoReturn:
+        """
+        Add function call record.
+        :param pack: Package name.
+        :param event: Message event.
+        :return: NoReturn.
+        """
         await orm.add(
             FunctionCallRecord,
             {

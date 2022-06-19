@@ -6,6 +6,10 @@ from pydantic import BaseModel, AnyHttpUrl, root_validator, validator
 
 
 class HubMetadata(BaseModel):
+    """
+    Metadata for hub.
+    """
+
     authorize: str = ""
     get_me: str = ""
     get_bot_list: str = ""
@@ -22,6 +26,10 @@ class HubMetadata(BaseModel):
 
 
 class HubConfig(BaseModel):
+    """
+    Configuration for hub.
+    """
+
     enabled: bool = False
     url: AnyHttpUrl = "https://api.nullqwertyuiop.me/project-null"
     secret: str = ""
@@ -32,7 +40,7 @@ class HubConfig(BaseModel):
     def hub_check(cls, values: dict):
         assert not (
             values.get("enabled", False) and values.get("secret", "") == ""
-        ), "secret must be filled when hub is enabled"
+        ), "Hub config is enabled but secret is not set"
         if not values.get("enabled", False):
             values["metadata"] = None
         elif values.get("metadata") is None:
@@ -41,6 +49,10 @@ class HubConfig(BaseModel):
 
 
 class PathConfig(BaseModel):
+    """
+    Configuration for path.
+    """
+
     root: Path = Path(__file__).parent.parent
     data: Path = Path(root / "data")
 
@@ -51,11 +63,19 @@ class PathConfig(BaseModel):
 
 
 class FunctionConfig(BaseModel):
+    """
+    Configuration for function.
+    """
+
     default: bool = False
     modules: Dict[str, dict] = {}
 
 
 class MySQLConfig(BaseModel):
+    """
+    Configuration for MySQL.
+    """
+
     disable_pooling: bool = False
     pool_size: int = 40
     max_overflow: int = 60
@@ -67,11 +87,15 @@ class MySQLConfig(BaseModel):
                 value.get("pool_size", 0) + value.get("max_overflow", 0) <= 0,
                 not value.get("disable_pooling"),
             ]
-        ), "pool_size and max_overflow must be greater than 0 if enabled pooling"
+        ), "pool_size and max_overflow must be positive when pooling is disabled"
         return value
 
 
 class DatabaseConfig(BaseModel):
+    """
+    Configuration for database.
+    """
+
     link: str = "sqlite+aiosqlite:///data/data.db"
     config: Union[None, MySQLConfig] = None
 
@@ -105,6 +129,10 @@ class DatabaseConfig(BaseModel):
 
 
 class Config(BaseModel):
+    """
+    Configuration for project.
+    """
+
     name: str = ""
     num: int = 0
     account: int = 0
@@ -122,7 +150,7 @@ class Config(BaseModel):
 
     @validator("name", "account", "verify_key")
     def config_check(cls, value):
-        assert value, "empty field found"
+        assert value, "name, account and verify_key can't be blank"
         return value
 
     @validator("env")
@@ -132,22 +160,42 @@ class Config(BaseModel):
 
 
 class UserPerm(Enum):
-    MEMBER = "MEMBER"
-    ADMINISTRATOR = "ADMINISTRATOR"
-    OWNER = "OWNER"
-    BOT_OWNER = "BOT_OWNER"
+    """
+    User permission.
+    """
+
+    MEMBER = ("MEMBER", 1)
+    ADMINISTRATOR = ("ADMINISTRATOR", 2)
+    OWNER = ("OWNER", 3)
+    BOT_OWNER = ("BOT_OWNER", 4)
 
     def __lt__(self, other: "UserPerm"):
-        lv_map = {
-            UserPerm.MEMBER: 1,
-            UserPerm.ADMINISTRATOR: 2,
-            UserPerm.OWNER: 3,
-            UserPerm.BOT_OWNER: 4,
-        }
-        return lv_map[self] < lv_map[other]
+        return self.value[1] < other.value[1]
+
+    def __le__(self, other: "UserPerm"):
+        return self.value[1] <= other.value[1]
+
+    def __eq__(self, other: "UserPerm"):
+        return self.value[1] == other.value[1]
+
+    def __gt__(self, other: "UserPerm"):
+        return self.value[1] > other.value[1]
+
+    def __ge__(self, other: "UserPerm"):
+        return self.value[1] >= other.value[1]
+
+    def __repr__(self):
+        return self.value[0]
+
+    def __str__(self):
+        return self.value[0]
 
 
 class Module(BaseModel):
+    """
+    Module.
+    """
+
     name: str = "Unknown"
     pack: str
     version: str = "Unknown"
@@ -166,3 +214,23 @@ class Module(BaseModel):
         elif category.startswith("enter"):
             category = "entertainment"
         return category
+
+    def __str__(self):
+        return self.name
+
+    def __repr__(self):
+        return (
+            f"Module({self.name})\n"
+            f"\tpack: {self.pack}\n"
+            f"\tversion: {self.version}\n"
+            f"\tauthor: {self.author}\n"
+            f"\tpypi: {self.pypi}\n"
+            f"\tcategory: {self.category}\n"
+            f"\tdescription: {self.description}\n"
+            f"\tdependency: {self.dependency}\n"
+            f"\tloaded: {self.loaded}\n"
+            f"\toverride_default: {self.override_default}\n"
+        )
+
+    def __hash__(self):
+        return hash(self.name)

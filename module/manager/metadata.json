@@ -8,7 +8,9 @@
     "pypi": false,
     "category": "utility",
     "description": "",
-    "dependency": null,
+    "dependency": [
+        "module.hub_service"
+    ],
     "loaded": true,
     "override_default": true
 }
