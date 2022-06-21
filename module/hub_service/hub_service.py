@@ -1,4 +1,4 @@
-from library.config import config, save_config
+from library.config import config
 from . import HubServiceNotEnabled
 
 if not config.hub.enabled:
@@ -32,7 +32,7 @@ class HubService:
     def update_metadata(self):
         with self.__session__.get(url=config.hub.url + config.hub.meta) as resp:
             config.hub.metadata = HubMetadata(**resp.json())
-            save_config(config)
+            config.save()
 
     def register_bot(self):
         with self.__session__.post(
@@ -50,7 +50,7 @@ class HubService:
         ) as resp:
             data = resp.json()
             config.num = data["num"]
-            save_config(config)
+            config.save()
 
     def authorize(self):
         with self.__session__.post(
@@ -68,7 +68,7 @@ class HubService:
             url=config.hub.url + config.hub.meta,
         ) as resp:
             config.hub.metadata = HubMetadata(**await resp.json())
-            save_config(config)
+            config.save()
 
     async def async_authorize(self):
         await self.check_session()
