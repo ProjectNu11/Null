@@ -17,8 +17,10 @@ from graia.ariadne.message.parser.twilight import (
 from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 
-from library.config import config, switch, reload_config
-from library.depend import Permission, FunctionCall
+from library.config import config
+from library.util.switch import switch
+from library.depend.permission import Permission
+from library.depend.function_call import FunctionCall
 from library.model import UserPerm
 from module import modules as __modules
 from .module.install import install_module
@@ -220,7 +222,7 @@ async def config_manager_admin(
         # TODO add update_module
         pass
     elif func in ("reload", "重载"):
-        reload_config()
+        config.reload()
         msg = MessageChain("成功重载配置")
     if msg:
         await app.send_message(
@@ -232,7 +234,7 @@ def module_switch(modules: list, group: int, value: bool) -> MessageChain:
     success_count = 0
     failed = []
     for name in modules:
-        if module := __modules.get_module(name):
+        if module := __modules.get(name):
             if module.pack == channel.module:
                 failed.append(name)
                 continue
@@ -351,7 +353,7 @@ async def list_module(group: int = None) -> MessageChain:
 
 async def load_module(name: str) -> MessageChain:
     reload_metadata()
-    if module := __modules.get_module(name):
+    if module := __modules.get(name):
         try:
             with saya.module_context():
                 saya.require(module.pack)
@@ -366,7 +368,7 @@ async def load_module(name: str) -> MessageChain:
 
 async def unload_module(name: str) -> MessageChain:
     reload_metadata()
-    if module := __modules.get_module(name):
+    if module := __modules.get(name):
         if chn := saya.channels.get(module.pack, None):
             if isinstance(module.override_default, bool):
                 return MessageChain(
@@ -418,7 +420,7 @@ async def upgrade_module(force: bool = False) -> MessageChain:
 
 
 def reload_metadata() -> NoReturn:
-    __modules.load_modules(reorder=True)
+    __modules.load(reorder=True)
 
 
 @channel.use(ListenerSchema(listening_events=[ApplicationLaunched]))

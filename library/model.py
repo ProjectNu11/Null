@@ -1,7 +1,9 @@
+import json
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Union, List, Literal
+from typing import Dict, Union, List, Literal, NoReturn
 
+from loguru import logger
 from pydantic import BaseModel, AnyHttpUrl, root_validator, validator
 
 
@@ -9,6 +11,8 @@ class HubMetadata(BaseModel):
     """
     Metadata for hub.
     """
+
+    __instance: "HubMetadata" = None
 
     authorize: str = ""
     get_me: str = ""
@@ -24,17 +28,29 @@ class HubMetadata(BaseModel):
     download_module: str = ""
     search_module: str = ""
 
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
 
 class HubConfig(BaseModel):
     """
     Configuration for hub.
     """
 
+    __instance: "HubConfig" = None
+
     enabled: bool = False
     url: AnyHttpUrl = "https://api.nullqwertyuiop.me/project-null"
     secret: str = ""
     meta: str = "/metadata"
     metadata: Union[None, HubMetadata] = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
     @root_validator()
     def hub_check(cls, values: dict):
@@ -53,8 +69,15 @@ class PathConfig(BaseModel):
     Configuration for path.
     """
 
+    __instance: "PathConfig" = None
+
     root: Path = Path(__file__).parent.parent
-    data: Path = Path(root / "data")
+    data: Path = Path(root, "data")
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
     @root_validator()
     def path_check(cls, values: dict):
@@ -67,8 +90,24 @@ class FunctionConfig(BaseModel):
     Configuration for function.
     """
 
+    __instance: "FunctionConfig" = None
+
     default: bool = False
     modules: Dict[str, dict] = {}
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def get_config(self, module: str, key: str = None):
+        if module_cfg := self.modules.get(module, None):
+            return module_cfg.get(key, None) if key else module_cfg
+
+    def update_config(self, module: str, cfg: Union[dict, BaseModel] = None):
+        if isinstance(cfg, BaseModel):
+            cfg = cfg.dict()
+        self.modules[module] = cfg
 
 
 class MySQLConfig(BaseModel):
@@ -76,9 +115,16 @@ class MySQLConfig(BaseModel):
     Configuration for MySQL.
     """
 
+    __instance: "MySQLConfig" = None
+
     disable_pooling: bool = False
     pool_size: int = 40
     max_overflow: int = 60
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance is None:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
 
     @root_validator()
     def mysql_check(cls, value: dict):
@@ -96,8 +142,15 @@ class DatabaseConfig(BaseModel):
     Configuration for database.
     """
 
+    __instance__: "DatabaseConfig" = None
+
     link: str = "sqlite+aiosqlite:///data/data.db"
     config: Union[None, MySQLConfig] = None
+
+    def __new__(cls, *args, **kwargs):
+        if cls.__instance__ is None:
+            cls.__instance__ = super().__new__(cls)
+        return cls.__instance__
 
     @validator("link")
     def check_link(cls, link: str):
@@ -133,6 +186,8 @@ class Config(BaseModel):
     Configuration for project.
     """
 
+    __instance: "Config" = None
+
     name: str = ""
     num: int = 0
     account: int = 0
@@ -148,6 +203,15 @@ class Config(BaseModel):
     path: PathConfig = PathConfig()
     hub: HubConfig = HubConfig()
 
+    def __new__(cls):
+        if not cls.__instance:
+            cls.__instance = super().__new__(cls)
+        return cls.__instance
+
+    def __init__(self):
+        self.__init_check()
+        super().__init__(**self.__load())
+
     @validator("name", "account", "verify_key")
     def config_check(cls, value):
         assert value, "name, account and verify_key can't be blank"
@@ -155,15 +219,78 @@ class Config(BaseModel):
 
     @validator("env")
     def env_check(cls, value):
+        value = value.lower()
         assert value in ["pip", "poetry"], "env must be pip or poetry"
         return value
+
+    @staticmethod
+    def __load():
+        with Path(Path().resolve(), "config.json").open("r", encoding="utf-8") as _f:
+            return json.loads(_f.read())
+
+    def __init_check(self):
+        if not Path(Path().resolve(), "config.json").exists():
+            super().__init__()
+            self.save()
+            logger.success("Created config.json using initial values")
+            logger.success("Modify essential fields in config.json to continue")
+            exit(-1)
+
+    def save(self) -> NoReturn:
+        """
+        Save config to config.json.
+
+        :return: NoReturn
+        """
+
+        with Path(Path().resolve(), "config.json").open("w", encoding="utf-8") as _f:
+            _f.write(self.json(indent=4, ensure_ascii=False))
+
+    def reload(self) -> NoReturn:
+        """
+        Reload config from config.json.
+
+        :return: NoReturn
+        """
+
+        super().__init__(**self.__load())
+
+    def get_module_config(self, module: str, key: str = None):
+        """
+        Get module config.
+
+        :param module: module name
+        :param key: key name
+        :return: module config
+        """
+
+        return self.func.get_config(module, key)
+
+    def update_module_config(self, module: str, cfg: Union[dict, BaseModel] = None):
+        """
+        Update module config.
+
+        :param module: module name
+        :param cfg: module config
+        :return: NoReturn
+        """
+
+        self.func.update_config(module, cfg)
+        self.save()
 
 
 class UserPerm(Enum):
     """
     User permission.
+
+    UserPerm.BOT_OWNER: bot owner, 4
+    UserPerm.OWNER: group owner, 3
+    UserPerm.ADMINISTRATOR: group administrator, 2
+    UserPerm.MEMBER: group member, 1
+    UserPerm.BLOCKED: blocked, 0
     """
 
+    BLOCKED = ("BLOCKED", 0)
     MEMBER = ("MEMBER", 1)
     ADMINISTRATOR = ("ADMINISTRATOR", 2)
     OWNER = ("OWNER", 3)
