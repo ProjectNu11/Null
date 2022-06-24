@@ -8,7 +8,7 @@ from graia.broadcast.builtin.decorators import Depend
 from loguru import logger
 
 from library import config
-from library.depend.permission import Permission
+from library.depend import Permission
 from library.model import UserPerm
 from library.util.switch import switch
 

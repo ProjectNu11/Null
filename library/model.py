@@ -93,6 +93,7 @@ class FunctionConfig(BaseModel):
     __instance: "FunctionConfig" = None
 
     default: bool = False
+    prefix: str = "."
     modules: Dict[str, dict] = {}
 
     def __new__(cls, *args, **kwargs):

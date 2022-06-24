@@ -5,6 +5,8 @@ from loguru import logger
 
 from library.config import config
 
+__version__ = "0.1.0"
+
 log_dir = Path(Path().resolve(), "log")
 log_dir.mkdir(exist_ok=True)
 

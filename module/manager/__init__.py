@@ -18,10 +18,9 @@ from graia.saya import Saya, Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 
 from library.config import config
-from library.util.switch import switch
-from library.depend.permission import Permission
-from library.depend.function_call import FunctionCall
+from library.depend import Permission, FunctionCall
 from library.model import UserPerm
+from library.util.switch import switch
 from module import modules as __modules
 from .module.install import install_module
 from .util import db_init

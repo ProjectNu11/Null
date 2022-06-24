@@ -83,11 +83,14 @@ class Modules:
 
         try:
             saya.require(module.pack)
-        except ModuleNotFoundError:
+        except ModuleNotFoundError as e:
             install_dependency(module)
             if retries > 0:
                 retries -= 1
                 return self.require_module(module, saya, log, retries - 1)
+            if log:
+                logger.exception(traceback.format_exc())
+            logger.error(e)
         except Exception as e:
             if log:
                 logger.exception(traceback.format_exc())
