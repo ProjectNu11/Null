@@ -12,16 +12,11 @@ from graia.saya import Saya
 from loguru import logger
 
 from library.model import Module
+from library.orm import db_init
 from library.util.dependency import async_install_dependency
 from module import modules, ModuleMetadata
 from .uninstall import uninstall_module
-from ..util import db_init
-
-try:
-    from module.hub_service.exception import HubServiceNotEnabled
-    from module.hub_service import hs
-except HubServiceNotEnabled:
-    hs = None
+from ..util import hs
 
 saya = Saya.current()
 

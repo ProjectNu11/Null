@@ -230,7 +230,7 @@ class Modules:
             and not pypi
             and not category
             and not dependency
-            and not loaded
+            and not isinstance(loaded, bool)
         ):
             raise ValueError("No search criteria provided")
         kwargs = {

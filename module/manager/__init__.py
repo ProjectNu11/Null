@@ -23,7 +23,9 @@ from library.model import UserPerm
 from library.util.switch import switch
 from module import modules as __modules
 from .module.install import install_module
-from .util import db_init
+from .module.search import search
+from .module.switch import module_switch
+from library.orm import db_init
 
 try:
     from module.hub_service.exception import HubServiceNotEnabled
@@ -227,68 +229,6 @@ async def config_manager_admin(
         await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
         )
-
-
-def module_switch(modules: list, group: int, value: bool) -> MessageChain:
-    success_count = 0
-    failed = []
-    for name in modules:
-        if module := __modules.get(name):
-            if module.pack == channel.module:
-                failed.append(name)
-                continue
-            switch.update(pack=module.pack, group=group, value=value)
-            success_count += 1
-        else:
-            failed.append(name)
-    msg = MessageChain(f"已{'开启' if value else '关闭'} {success_count} 个插件")
-    if failed:
-        msg += MessageChain(f"\n以下 {len(failed)} 个插件无法找到或无法改动：")
-        for fail in failed:
-            msg += MessageChain(f"\n - {fail}")
-    return msg
-
-
-async def search(name: str, category: str, author: str) -> MessageChain:
-    if not (
-        modules := await hs.search_module(name=name, category=category, author=author)
-    ):
-        return MessageChain("无法找到符合要求的插件")
-    fwd_node_list = [
-        ForwardNode(
-            target=config.account,
-            name=f"{config.name}#{config.num}",
-            time=datetime.now(),
-            message=MessageChain(f"查询到 {len(modules)} 个插件"),
-        )
-    ]
-    for index, module in enumerate(modules):
-        module_category = (
-            "实用工具"
-            if module.category == "utility"
-            else "娱乐"
-            if module.category == "entertainment"
-            else "其他"
-        )
-        module_dependency = ", ".join(module.dependency) if module.dependency else "无"
-        fwd_node_list += [
-            ForwardNode(
-                target=config.account,
-                name=f"{config.name}#{config.num}",
-                time=datetime.now() + timedelta(seconds=15) * (index + 1),
-                message=MessageChain(
-                    f"{index + 1}. {module.name}"
-                    f"\n - 包名：{module.pack}"
-                    f"\n - 版本：{module.version}"
-                    f"\n - 作者：{', '.join(module.author)}"
-                    f"\n - 分类：{module_category}"
-                    f"\n - 描述：{module.description}"
-                    f"\n - 依赖：{module_dependency}"
-                    f"\n - Pypi：{'是' if module.pypi else '否'}"
-                ),
-            )
-        ]
-    return MessageChain([Forward(fwd_node_list)])
 
 
 async def list_module(group: int = None) -> MessageChain:

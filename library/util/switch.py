@@ -5,6 +5,7 @@ from typing import Dict, NoReturn, Union
 from graia.ariadne.model import Group
 
 from library import config
+from module import modules
 
 
 class Switch:
@@ -45,6 +46,9 @@ class Switch:
         :return: switch value
         """
 
+        if module := modules.get(pack):
+            if isinstance(module.override_switch, bool):
+                return module.override_switch
         if isinstance(group, Group):
             group = str(group.id)
         elif isinstance(group, int):

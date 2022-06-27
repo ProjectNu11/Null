@@ -13,6 +13,7 @@ from sqlalchemy import (
     BIGINT,
     String,
 )
+from sqlalchemy.exc import InternalError, ProgrammingError
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -225,3 +226,10 @@ class FunctionCallRecord(Base):
     field = Column(BIGINT, nullable=False)
     supplicant = Column(BIGINT, nullable=False)
     function = Column(String(length=4000), nullable=False)
+
+
+async def db_init():
+    try:
+        await orm.init_check()
+    except (AttributeError, InternalError, ProgrammingError):
+        await orm.create_all()

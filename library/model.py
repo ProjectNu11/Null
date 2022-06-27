@@ -334,6 +334,7 @@ class Module(BaseModel):
     dependency: List[str] = None
     loaded: bool = True
     override_default: Union[None, bool] = None
+    override_switch: Union[None, bool] = None
 
     @validator("category", pre=True)
     def category_validator(cls, category: str):
@@ -358,6 +359,7 @@ class Module(BaseModel):
             f"\tdependency: {self.dependency}\n"
             f"\tloaded: {self.loaded}\n"
             f"\toverride_default: {self.override_default}\n"
+            f"\toverride_switch: {self.override_switch}\n"
         )
 
     def __hash__(self):
