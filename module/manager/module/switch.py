@@ -16,6 +16,14 @@ def module_switch(name: str, group: Union[int, Group], value: bool) -> bool:
 
 
 def module_switch_msg(*args, **kwargs) -> MessageChain:
+    """
+    Switch module.
+
+    :param args: module names
+    :param kwargs: group: Group, value: bool
+    :return: MessageChain
+    """
+
     assert (group := kwargs.get("group", None)), "未指定参数 group"
     assert (value := kwargs.get("value", None)), "未指定参数 value"
     success_count = 0

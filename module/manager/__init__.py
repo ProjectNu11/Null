@@ -24,7 +24,7 @@ from library.util.switch import switch
 from module import modules as __modules
 from .module.install import install_module
 from .module.search import search
-from .module.switch import module_switch
+from .module.switch import module_switch_msg
 from library.orm import db_init
 
 try:
@@ -177,10 +177,10 @@ async def module_manager_admin(
             event.sender.group.id if isinstance(event, GroupMessage) else 0
         )
     elif func in ("enable", "开启", "打开", "disable", "禁用", "关闭"):
-        msg = module_switch(
-            param,
-            event.sender.group.id if isinstance(event, GroupMessage) else 0,
-            func not in ("disable", "禁用", "关闭"),
+        msg = module_switch_msg(
+            *param,
+            group=event.sender.group.id if isinstance(event, GroupMessage) else 0,
+            value=func not in ("disable", "禁用", "关闭"),
         )
 
     if msg:
