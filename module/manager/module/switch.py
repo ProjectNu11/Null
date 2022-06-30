@@ -25,7 +25,8 @@ def module_switch_msg(*args, **kwargs) -> MessageChain:
     """
 
     assert (group := kwargs.get("group", None)), "未指定参数 group"
-    assert (value := kwargs.get("value", None)), "未指定参数 value"
+    if not isinstance(value := kwargs.get(("value", None)), bool):
+        raise AssertionError("未指定参数 value")
     success_count = 0
     failed = []
     for name in args:
