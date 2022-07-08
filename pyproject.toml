@@ -6,7 +6,7 @@ authors = ["nullqwertyuiop"]
 license = "AGPL-3.0 license"
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = "^3.10"
 graia-ariadne = "^0.7.13"
 graia-saya = "^0.0.16"
 graia-scheduler = "^0.0.8"
