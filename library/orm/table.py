@@ -22,3 +22,22 @@ class FunctionCallRecord(Base):
     supplicant = Column(BIGINT, nullable=False)
     function = Column(String(length=4000), nullable=False)
 
+
+class BlacklistTable(Base):
+    """
+    BlacklistTable
+
+    field: Field ID, -1 for global, 0 for direct message, >0 for group
+    target: Target ID, 0 for group, >0 for user
+    time: Time
+    reason: Reason
+    supplicant: Supplicant ID
+    """
+
+    __tablename__ = "blacklist"
+
+    field = Column(BIGINT, nullable=False, primary_key=True)
+    target = Column(BIGINT, nullable=False, primary_key=True)
+    time = Column(DateTime, nullable=False)
+    reason = Column(String(length=4000), nullable=False)
+    supplicant = Column(BIGINT, nullable=False)
