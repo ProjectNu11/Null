@@ -4,7 +4,8 @@ from typing import NoReturn
 from graia.ariadne.event.message import MessageEvent, GroupMessage
 from graia.broadcast.builtin.decorators import Depend
 
-from library.orm import orm, FunctionCallRecord
+from library.orm import orm
+from library.orm.table import FunctionCallRecord
 
 
 class FunctionCall:
