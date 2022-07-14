@@ -1,6 +1,6 @@
 import json
 from pathlib import Path
-from typing import Dict, NoReturn, Union
+from typing import NoReturn
 
 from graia.ariadne.model import Group
 
@@ -9,7 +9,7 @@ from module import modules
 
 
 class Switch:
-    __switch: dict = Dict[str, Dict[str, bool]]
+    __switch: dict[str, dict[str, bool]] = {}
 
     def __init__(self):
         self.load()
@@ -23,7 +23,6 @@ class Switch:
 
         if not Path(config.path.data, "switch.json").is_file():
             self.write()
-            self.__switch = {}
         with Path(config.path.data, "switch.json").open("r", encoding="utf-8") as f:
             self.__switch = json.loads(f.read())
 
@@ -37,7 +36,7 @@ class Switch:
         with Path(config.path.data, "switch.json").open("w", encoding="utf-8") as f:
             f.write(json.dumps(self.__switch, indent=4, ensure_ascii=False))
 
-    def get(self, pack: str, group: Union[Group, int, str, None]) -> Union[None, bool]:
+    def get(self, pack: str, group: Group | int | str | None) -> None | bool:
         """
         Get switch value.
 
@@ -59,7 +58,7 @@ class Switch:
             return module.get(group, None)
         return None
 
-    def update(self, pack: str, group: Union[Group, int, str], value: bool):
+    def update(self, pack: str, group: Group | int | str, value: bool):
         """
         Update switch value.
 

@@ -1,7 +1,7 @@
 import asyncio
 import subprocess
 from pathlib import Path
-from typing import List, NoReturn
+from typing import NoReturn
 
 from loguru import logger
 
@@ -10,7 +10,7 @@ from library.model import Module
 
 
 def install_dependency(
-    module: Module = None, requirements: List[str] = None
+    module: Module = None, requirements: list[str] = None
 ) -> NoReturn:
     """
     Install dependency for module.
@@ -43,7 +43,7 @@ def install_dependency(
 
 
 async def async_install_dependency(
-    module: Module = None, requirements: List[str] = None
+    module: Module = None, requirements: list[str] = None
 ) -> NoReturn:
     """
     Install dependency for module asynchronously.

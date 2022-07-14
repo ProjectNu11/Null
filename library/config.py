@@ -1,4 +1,4 @@
-from library.model import Config
+from library.model import NConfig
 
-config: Config = Config()
+config: NConfig = NConfig()
 config.save()

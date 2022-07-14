@@ -11,6 +11,7 @@ from library import config
 from library.depend import Permission
 from library.model import UserPerm
 from library.util.switch import switch
+from module import modules
 
 
 class Switch:
@@ -18,6 +19,7 @@ class Switch:
     def check(
         pack: str,
         override_level: UserPerm = None,
+        no_notice: bool = False,
         on_failure: MessageChain = None,
         log: bool = True,
     ) -> Depend:
@@ -26,6 +28,7 @@ class Switch:
 
         :param pack: Package name.
         :param override_level: Override user permission.
+        :param no_notice: Disable notice.
         :param on_failure: Message chain to send when switch is off.
         :param log: Whether to log the call.
         :return: Depend decorator.
@@ -56,12 +59,16 @@ class Switch:
                 if not config.func.default:
                     raise ExecutionStop
             except ExecutionStop:
-                if on_failure:
+                if no_notice:
+                    raise
+                if on_failure or config.func.notice:
                     await Ariadne.current().send_message(
                         event.sender.group
                         if isinstance(event, GroupMessage)
                         else event.sender,
-                        on_failure.as_sendable(),
+                        on_failure.as_sendable()
+                        if on_failure
+                        else config.func.notice_msg.format(module=modules.get(pack)),
                     )
                 raise
 

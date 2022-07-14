@@ -1,14 +1,16 @@
 import asyncio
 import json
 import os
+import shutil
 import traceback
 from pathlib import Path
-from typing import List, NoReturn, Union, Optional
+from typing import NoReturn
 
 from graia.saya import Saya
 from loguru import logger
 from pydantic import ValidationError
 
+from library import config
 from library.model import Module
 from library.util.dependency import install_dependency
 
@@ -18,7 +20,7 @@ class Modules:
     Modules class contains a list of modules.
     """
 
-    __all__: List[Module] = []
+    __all__: list[Module] = []
     __instance: "Modules" = None
 
     def __new__(cls, *args, **kwargs):
@@ -29,10 +31,10 @@ class Modules:
     def __init__(self):
         self.load(reorder=True)
 
-    def __getitem__(self, name: str):
-        return self.get(name)
+    def __getitem__(self, item: str | slice):
+        return self.get(item) if isinstance(item, str) else self.__all__[item]
 
-    def __contains__(self, module: Union[str, Module]):
+    def __contains__(self, module: str | Module):
         if isinstance(module, str):
             return bool(self.get(module))
         return module in self.__all__
@@ -44,11 +46,11 @@ class Modules:
         return len(self.__all__)
 
     def __repr__(self):
-        return f"Modules({self.__all__})"
+        return f"Modules({len(self)})\n{''.join(map(repr, self))}"
 
     def __call__(self, match_any: bool = True, *args, **kwargs):
         if len(args) == 1:
-            return self.search(match_any, name=args[0], pack=args[0])
+            return self.search(match_any=True, name=args[0], pack=args[0])
         if not kwargs:
             raise ValueError("No search criteria provided")
         return self.search(match_any, **kwargs)
@@ -134,7 +136,7 @@ class Modules:
         :return: None
         """
 
-        __modules = []
+        __modules: list[Module] = []
         for path in Path(os.path.dirname(__file__)).iterdir():
             if path.name.startswith("_"):
                 continue
@@ -167,7 +169,7 @@ class Modules:
         __modules = __dependencies + __common + __unloaded
         self.__all__ = __modules
 
-    def get(self, name: str) -> Union[None, Module]:
+    def get(self, name: str) -> None | Module:
         """
         Get module by name.
 
@@ -188,15 +190,43 @@ class Modules:
 
         self.__all__.append(module)
 
-    def remove(self, pack: str) -> NoReturn:
+    @staticmethod
+    def __remove_dir(path: Path) -> NoReturn:
+        """
+        Remove directory.
+
+        :param path: Path object.
+        :return: None
+        """
+
+        if not path.exists():
+            return
+        if path.is_dir():
+            logger.info(f"Removing directory {path}")
+            shutil.rmtree(path)
+        else:
+            logger.info(f"Removing file {path}")
+            path.unlink(missing_ok=True)
+
+    def remove(self, pack: str, keep_data: bool = True) -> bool:
         """
         Remove module from the list.
 
         :param pack: Module pack.
+        :param keep_data: Keep module data.
         :return: None
         """
 
+        if not (module := self.get(pack)):
+            return False
+        path = Path(Path().resolve(), *module.pack.split("."))
         self.__all__ = list(filter(lambda x: x.pack != pack, self.__all__))
+        self.__remove_dir(path)
+        if keep_data:
+            return True
+        path = Path(config.path.data, module.pack)
+        self.__remove_dir(path)
+        return True
 
     def search(
         self,
@@ -206,9 +236,9 @@ class Modules:
         author: str = None,
         pypi: bool = None,
         category: str = None,
-        dependency: Union[str, bool] = None,
+        dependency: str | bool = None,
         loaded: bool = None,
-    ) -> List[Module]:
+    ) -> list[Module]:
         """
         Search module by multiple fields.
 
@@ -255,7 +285,7 @@ class Modules:
             loaded=loaded,
         )
 
-    def __search_match_all(self, **kwargs) -> List[Module]:
+    def __search_match_all(self, **kwargs) -> list[Module]:
         """
         Search module by multiple fields.
 
@@ -279,7 +309,7 @@ class Modules:
             query = self.__search_by_loaded(kwargs.get("loaded"), query)
         return query
 
-    def __search_match_any(self, **kwargs) -> List[Module]:
+    def __search_match_any(self, **kwargs) -> list[Module]:
         """
         Search module by multiple fields.
 
@@ -303,7 +333,7 @@ class Modules:
             query += self.__search_by_loaded(kwargs.get("loaded"))
         return list(set(query))
 
-    def __search(self, func: callable, field: List[Module] = None) -> List[Module]:
+    def __search(self, func: callable, field: list[Module] = None) -> list[Module]:
         """
         Search module by field.
 
@@ -318,7 +348,7 @@ class Modules:
             return module
         return []
 
-    def __search_by_name(self, name: str, field: List[Module] = None) -> List[Module]:
+    def __search_by_name(self, name: str, field: list[Module] = None) -> list[Module]:
         """
         Search module by name.
 
@@ -337,7 +367,7 @@ class Modules:
             field,
         )
 
-    def __search_by_pack(self, pack: str, field: List[Module] = None) -> List[Module]:
+    def __search_by_pack(self, pack: str, field: list[Module] = None) -> list[Module]:
         """
         Search module by pack.
 
@@ -357,8 +387,8 @@ class Modules:
         )
 
     def __search_by_author(
-        self, author: str, field: List[Module] = None
-    ) -> List[Module]:
+        self, author: str, field: list[Module] = None
+    ) -> list[Module]:
         """
         Search module by author.
 
@@ -372,7 +402,7 @@ class Modules:
             field,
         )
 
-    def __search_by_pypi(self, pypi: bool, field: List[Module] = None) -> List[Module]:
+    def __search_by_pypi(self, pypi: bool, field: list[Module] = None) -> list[Module]:
         """
         Search module by dependency on PyPI.
 
@@ -384,8 +414,8 @@ class Modules:
         return self.__search(lambda x: x.pypi == pypi, field)
 
     def __search_by_category(
-        self, category: str, field: List[Module] = None
-    ) -> List[Module]:
+        self, category: str, field: list[Module] = None
+    ) -> list[Module]:
         """
         Search module by category.
 
@@ -400,8 +430,8 @@ class Modules:
         )
 
     def __search_by_dependency(
-        self, dependency: Union[str, bool], field: List[Module] = None
-    ) -> List[Module]:
+        self, dependency: str | bool, field: list[Module] = None
+    ) -> list[Module]:
         """
         Search module by dependency.
 
@@ -427,8 +457,8 @@ class Modules:
         )
 
     def __search_by_loaded(
-        self, loaded: bool, field: List[Module] = None
-    ) -> List[Module]:
+        self, loaded: bool, field: list[Module] = None
+    ) -> list[Module]:
         """
         Search module by loaded.
 
@@ -490,7 +520,7 @@ class ModuleMetadata:
             f.write(module.json(indent=4, ensure_ascii=False))
 
     @classmethod
-    def read_and_update(cls, file: Path, is_dir: bool = False) -> Optional[Module]:
+    def read_and_update(cls, file: Path, is_dir: bool = False) -> Module | None:
         """
         Reads the metadata from the given file or directory and updates the module with the metadata.
 

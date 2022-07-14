@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Dict, Union, List, Literal, NoReturn
+from typing import Literal, NoReturn
 
 from loguru import logger
 from pydantic import BaseModel, AnyHttpUrl, root_validator, validator
@@ -45,7 +45,7 @@ class HubConfig(BaseModel):
     url: AnyHttpUrl = "https://api.nullqwertyuiop.me/project-null"
     secret: str = ""
     meta: str = "/metadata"
-    metadata: Union[None, HubMetadata] = None
+    metadata: None | HubMetadata = None
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
@@ -73,6 +73,8 @@ class PathConfig(BaseModel):
 
     root: Path = Path(__file__).parent.parent
     data: Path = Path(root, "data")
+    config: Path = Path(data, "config")
+    shared: Path = Path(data, "shared")
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
@@ -82,6 +84,8 @@ class PathConfig(BaseModel):
     @root_validator()
     def path_check(cls, values: dict):
         values.get("data").mkdir(parents=True, exist_ok=True)
+        values.get("config").mkdir(parents=True, exist_ok=True)
+        values.get("shared").mkdir(parents=True, exist_ok=True)
         return values
 
 
@@ -93,8 +97,10 @@ class FunctionConfig(BaseModel):
     __instance: "FunctionConfig" = None
 
     default: bool = False
+    notice: bool = True
+    notice_msg: str | None = "模块 {module.name} 已关闭，请联系管理员开启"
     prefix: str = "."
-    modules: Dict[str, dict] = {}
+    modules: dict[str, dict] = {}
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance is None:
@@ -105,10 +111,17 @@ class FunctionConfig(BaseModel):
         if module_cfg := self.modules.get(module, None):
             return module_cfg.get(key, None) if key else module_cfg
 
-    def update_config(self, module: str, cfg: Union[dict, BaseModel] = None):
+    def update_config(self, module: str, cfg: dict | BaseModel = None):
         if isinstance(cfg, BaseModel):
             cfg = cfg.dict()
         self.modules[module] = cfg
+
+    @root_validator()
+    def function_check(cls, values: dict):
+        assert not (
+            values.get("notice_msg", None) is None and values.get("notice", True)
+        ), "Function notice is enabled but notice message is not set"
+        return values
 
 
 class MySQLConfig(BaseModel):
@@ -146,7 +159,7 @@ class DatabaseConfig(BaseModel):
     __instance__: "DatabaseConfig" = None
 
     link: str = "sqlite+aiosqlite:///data/data.db"
-    config: Union[None, MySQLConfig] = None
+    config: None | MySQLConfig = None
 
     def __new__(cls, *args, **kwargs):
         if cls.__instance__ is None:
@@ -182,12 +195,12 @@ class DatabaseConfig(BaseModel):
         return value
 
 
-class Config(BaseModel):
+class NConfig(BaseModel):
     """
     Configuration for project.
     """
 
-    __instance: "Config" = None
+    __instance: "NConfig" = None
 
     name: str = ""
     num: int = 0
@@ -195,23 +208,24 @@ class Config(BaseModel):
     env: str = ""
     host: AnyHttpUrl = ""
     verify_key: str = ""
-    dev_group: List[int] = []
-    owners: List[int] = []
+    dev_group: list[int] = []
+    owners: list[int] = []
     proxy: str = None
-    log_retention: Union[None, int] = 7
+    log_retention: None | int = 7
     db: DatabaseConfig = DatabaseConfig()
     func: FunctionConfig = FunctionConfig()
     path: PathConfig = PathConfig()
     hub: HubConfig = HubConfig()
 
+    def __init__(self):
+        self.__init_check()
+        super().__init__(**self.__load())
+        logger.success("Loaded config from config.json")
+
     def __new__(cls):
         if not cls.__instance:
             cls.__instance = super().__new__(cls)
         return cls.__instance
-
-    def __init__(self):
-        self.__init_check()
-        super().__init__(**self.__load())
 
     @validator("name", "account", "verify_key")
     def config_check(cls, value):
@@ -267,7 +281,7 @@ class Config(BaseModel):
 
         return self.func.get_config(module, key)
 
-    def update_module_config(self, module: str, cfg: Union[dict, BaseModel] = None):
+    def update_module_config(self, module: str, cfg: dict | BaseModel = None):
         """
         Update module config.
 
@@ -327,21 +341,27 @@ class Module(BaseModel):
     name: str = "Unknown"
     pack: str
     version: str = "Unknown"
-    author: List[str] = ["Unknown"]
+    author: list[str] = ["Unknown"]
     pypi: bool = False
-    category: Literal["utility", "entertainment", "misc"] = "misc"
+    category: Literal[
+        "utility", "entertainment", "dependency", "miscellaneous"
+    ] = "miscellaneous"
     description: str = ""
-    dependency: List[str] = None
+    dependency: list[str] = None
     loaded: bool = True
-    override_default: Union[None, bool] = None
-    override_switch: Union[None, bool] = None
+    override_default: None | bool = None
+    override_switch: None | bool = None
 
     @validator("category", pre=True)
     def category_validator(cls, category: str):
-        if category.startswith("util"):
+        if category.startswith("uti"):
             category = "utility"
-        elif category.startswith("enter"):
+        elif category.startswith("ent"):
             category = "entertainment"
+        elif category.startswith("dep"):
+            category = "dependency"
+        elif category.startswith("mis"):
+            category = "miscellaneous"
         return category
 
     def __str__(self):
