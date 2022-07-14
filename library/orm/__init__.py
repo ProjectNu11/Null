@@ -56,6 +56,15 @@ class AsyncEngine:
                 if db_mutex:
                     db_mutex.release()
 
+    async def fetchall(self, sql):
+        """
+        Fetch all SQL result, proxy for `all`.
+        :param sql: SQL string.
+        :return: SQL result.
+        """
+
+        return await self.all(sql)
+
     async def all(self, sql):
         """
         Fetch all SQL result.
