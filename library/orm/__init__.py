@@ -59,6 +59,7 @@ class AsyncEngine:
     async def fetchall(self, sql):
         """
         Fetch all SQL result, proxy for `all`.
+
         :param sql: SQL string.
         :return: SQL result.
         """
