@@ -9,8 +9,8 @@ from graia.saya.builtins.broadcast import BroadcastBehaviour
 from graia.scheduler import GraiaScheduler
 from graia.scheduler.saya.behaviour import GraiaSchedulerBehaviour
 
+from library.context import scheduler
 from library.config import config
-from module import modules
 
 ariadne = Ariadne(
     connection=ariadne_config(
@@ -21,12 +21,14 @@ ariadne = Ariadne(
     )
 )
 saya = ariadne.create(Saya)
-ariadne.create(GraiaScheduler)
+scheduler.set(ariadne.create(GraiaScheduler))
 saya.install_behaviours(
     ariadne.create(BroadcastBehaviour),
     ariadne.create(GraiaSchedulerBehaviour),
 )
-modules.require_modules(saya, log_exception=False)
 
 if __name__ == """__main__""":
+    from module import modules
+
+    modules.require_modules(saya, log_exception=False)
     ariadne.launch_blocking()

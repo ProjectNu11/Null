@@ -21,9 +21,11 @@ class Switch:
         :return: None.
         """
 
-        if not Path(config.path.data, "switch.json").is_file():
+        if not Path(config.path.data, "library", "switch.json").is_file():
             self.write()
-        with Path(config.path.data, "switch.json").open("r", encoding="utf-8") as f:
+        with Path(config.path.data, "library", "switch.json").open(
+            "r", encoding="utf-8"
+        ) as f:
             self.__switch = json.loads(f.read())
 
     def write(self) -> NoReturn:
@@ -33,7 +35,9 @@ class Switch:
         :return: None.
         """
 
-        with Path(config.path.data, "switch.json").open("w", encoding="utf-8") as f:
+        with Path(config.path.data, "library", "switch.json").open(
+            "w", encoding="utf-8"
+        ) as f:
             f.write(json.dumps(self.__switch, indent=4, ensure_ascii=False))
 
     def get(self, pack: str, group: Group | int | str | None) -> None | bool:

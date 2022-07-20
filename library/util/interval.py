@@ -3,9 +3,11 @@ from datetime import datetime, timedelta
 from pathlib import Path
 
 from graia.ariadne.model import Member, Friend
+from graia.scheduler import GraiaScheduler, timers
 from loguru import logger
 
 from library import config
+from library.context import scheduler
 
 
 class Interval:
@@ -128,7 +130,11 @@ class Interval:
         return self.get(module, supplicant)
 
     def flush(
-        self, module: str | None = None, supplicant: int | Member | Friend | None = None
+        self,
+        module: str | None = None,
+        supplicant: int | Member | Friend | None = None,
+        *,
+        skip_saving: bool = False,
     ):
         supplicant = self.__type_convert(supplicant)
         if not module:
@@ -137,7 +143,25 @@ class Interval:
             del self.__cache[module]
         else:
             del self.__cache[module][supplicant]
+        if skip_saving:
+            return
         self.__save_pickle()
+
+    def cleanup(self):
+        cleaned = False
+        for module, users in self.__cache.copy().items():
+            for user, __interval in users.items():
+                if __interval < datetime.now():
+                    cleaned = True
+                    self.flush(module, user, skip_saving=True)
+        if cleaned:
+            self.__save_pickle()
 
 
 interval = Interval()
+scheduler: GraiaScheduler = scheduler.get()
+
+
+@scheduler.schedule(timers.crontabify("* * * * *"))
+async def __auto_cleanup():
+    interval.cleanup()
