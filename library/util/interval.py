@@ -1,4 +1,5 @@
 import pickle
+from copy import deepcopy
 from datetime import datetime, timedelta
 from pathlib import Path
 
@@ -149,7 +150,7 @@ class Interval:
 
     def cleanup(self):
         cleaned = False
-        for module, users in self.__cache.copy().items():
+        for module, users in deepcopy(self.__cache).items():
             for user, __interval in users.items():
                 if __interval < datetime.now():
                     cleaned = True
