@@ -205,6 +205,7 @@ class NConfig(BaseModel):
     name: str = ""
     num: int = 0
     account: int = 0
+    description: str = "Another Modular Bot"
     env: str = ""
     host: AnyHttpUrl = ""
     verify_key: str = ""
@@ -349,6 +350,7 @@ class Module(BaseModel):
     description: str = ""
     dependency: list[str] = None
     loaded: bool = True
+    hidden: bool = False
     override_default: None | bool = None
     override_switch: None | bool = None
 
@@ -378,6 +380,7 @@ class Module(BaseModel):
             f"\tdescription: {self.description}\n"
             f"\tdependency: {self.dependency}\n"
             f"\tloaded: {self.loaded}\n"
+            f"\thidden: {self.hidden}\n"
             f"\toverride_default: {self.override_default}\n"
             f"\toverride_switch: {self.override_switch}\n"
         )

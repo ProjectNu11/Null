@@ -1,0 +1,16 @@
+{
+    "name": "帮助菜单",
+    "pack": "module.help_desk",
+    "version": "0.1",
+    "author": [
+        "nullqwertyuiop"
+    ],
+    "pypi": false,
+    "category": "utility",
+    "description": "生成帮助菜单",
+    "dependency": null,
+    "loaded": true,
+    "hidden": false,
+    "override_default": true,
+    "override_switch": true
+}

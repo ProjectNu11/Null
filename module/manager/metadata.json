@@ -12,6 +12,7 @@
         "module.hub_service"
     ],
     "loaded": true,
+    "hidden": false,
     "override_default": true,
     "override_switch": true
 }

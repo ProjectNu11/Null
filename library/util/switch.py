@@ -5,6 +5,7 @@ from typing import NoReturn
 from graia.ariadne.model import Group
 
 from library import config
+from library.model import Module
 from module import modules
 
 
@@ -40,7 +41,7 @@ class Switch:
         ) as f:
             f.write(json.dumps(self.__switch, indent=4, ensure_ascii=False))
 
-    def get(self, pack: str, group: Group | int | str | None) -> None | bool:
+    def get(self, pack: str | Module, group: Group | int | str | None) -> None | bool:
         """
         Get switch value.
 
@@ -49,9 +50,12 @@ class Switch:
         :return: switch value
         """
 
-        if module := modules.get(pack):
-            if isinstance(module.override_switch, bool):
-                return module.override_switch
+        if isinstance(pack, Module):
+            module = pack
+        elif not (module := modules.get(pack)):
+            return None
+        if isinstance(module.override_switch, bool):
+            return module.override_switch
         if isinstance(group, Group):
             group = str(group.id)
         elif isinstance(group, int):
