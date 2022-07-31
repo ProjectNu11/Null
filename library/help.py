@@ -68,25 +68,20 @@ class HelpMenu:
             if module.hidden:
                 continue
             icon = self.__get_module_icon(module)
-
             offset = 0
             if not module.loaded:
                 offset = 2
-            status = self.__get_switch(module, self.__field)
+            status = self.__get_switch(module.pack, self.__field)
             status = int(status) + offset
-
             boxes[status].add(
-                module.name,
-                module.description if module.description else "暂无描述",
-                icon,
-                COLOR_PALETTE[status],
+                module.name, module.description or "暂无描述", icon, COLOR_PALETTE[status]
             )
 
         box_list = [boxes[0], boxes[1], boxes[2], boxes[3]]
         return [box for box in box_list if box.has_content()]
 
     @staticmethod
-    def __get_switch(module: Module, field: int) -> bool:
+    def __get_switch(module: str, field: int) -> bool:
         if (status := switch.get(module, field)) is None:
             status = config.func.default
         return status
