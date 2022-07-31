@@ -117,7 +117,7 @@ class HelpMenu:
                 text=f"已禁用 {disabled} 个插件",
                 description="将以 浅红色 显示",
                 icon=IconUtil.get_icon("close", color=Color.FOREGROUND_COLOR_LIGHT),
-                icon_color=COLOR_PALETTE[2],
+                icon_color=COLOR_PALETTE[0],
             )
         if hidden:
             box.add(
