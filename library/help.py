@@ -141,8 +141,11 @@ class HelpMenu:
     def load_custom_element(self) -> list[Box, Image.Image]:
         elements = []
         for file in custom_element_path.iterdir():
-            if file.name.startswith("DARK-") and not self.__dark:
-                continue
+            if not file.name.startswith("UNIVERSAL-"):
+                if self.__dark and not file.name.startswith("DARK-"):
+                    continue
+                if not self.__dark and file.name.startswith("DARK-"):
+                    continue
             if file.name.endswith(".pickle"):
                 with file.open("rb") as f:
                     element = pickle.load(f)
