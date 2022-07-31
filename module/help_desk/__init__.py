@@ -110,7 +110,7 @@ class GroupCache(BaseModel):
             return
         self.light = output.getvalue()
 
-    async def invalidate(self) -> None:
+    def invalidate(self) -> None:
         self.hash = ""
 
     async def get(self, dark: bool, app: Ariadne):
