@@ -53,7 +53,7 @@ avatar_img: PillowImage.Image
     )
 )
 async def help_menu(app: Ariadne, event: MessageEvent, invalidate: ArgResult):
-    if invalidate:
+    if invalidate.result:
         if not Permission.permission_check(UserPerm.BOT_OWNER, event):
             return
         return await app.send_message(
