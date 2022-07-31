@@ -77,12 +77,13 @@ async def help_menu(app: Ariadne, event: MessageEvent, invalidate: ArgResult):
 
 class GroupCache(BaseModel):
     id: int
-    light: bytes = None
-    dark: bytes = None
-    hash: str = None
+    light: bytes | None = None
+    light_hash: str | None = None
+    dark: bytes | None = None
+    dark_hash: str | None = None
 
     def generate_hash(self) -> str:
-        data: dict[str:int] = {}
+        data: dict[str, int] = {}
         for module in modules:
             offset = 0
             if not module.loaded:
@@ -93,16 +94,21 @@ class GroupCache(BaseModel):
             data[module.pack] = status
         return md5(pickle.dumps(data)).hexdigest()
 
-    def compare_hash(self) -> bool:
-        return self.hash == self.generate_hash()
+    def compare_hash(self, dark: bool) -> bool:
+        if dark:
+            return self.dark_hash == self.generate_hash()
+        return self.light_hash == self.generate_hash()
 
-    def update_hash(self) -> None:
-        self.hash = self.generate_hash()
+    def update_hash(self, dark: bool) -> None:
+        if dark:
+            self.dark_hash = self.generate_hash()
+        else:
+            self.light_hash = self.generate_hash()
 
     async def cache(self, dark: bool = False) -> None:
         menu = HelpMenu(self.id, avatar_img, dark=dark)
         menu_image = await menu.async_compose()
-        self.update_hash()
+        self.update_hash(dark)
         output = BytesIO()
         menu_image.convert("RGB").save(output, format="JPEG")
         if dark:
@@ -111,10 +117,13 @@ class GroupCache(BaseModel):
         self.light = output.getvalue()
 
     def invalidate(self) -> None:
-        self.hash = ""
+        self.light = None
+        self.light_hash = None
+        self.dark = None
+        self.dark_hash = None
 
     async def get(self, dark: bool, app: Ariadne):
-        if self.compare_hash():
+        if self.compare_hash(dark):
             return self.dark if dark else self.light
         if self.id != 0:
             await app.send_group_message(self.id, MessageChain("正在更新缓存..."))
