@@ -50,21 +50,23 @@ class HelpMenu:
 
     @staticmethod
     def __get_module_icon(module: Module) -> Image.Image:
-        icon = Path(module.pack, "icon.png")
+        icon = Path(Path().resolve(), *module.pack.split("."), "icon.png")
         if icon.is_file():
             return Image.open(icon)
         else:
             return IconUtil.get_icon("toy-brick", color=Color.FOREGROUND_COLOR_LIGHT)
 
     def compose_module_boxes(self) -> list[Box]:
-        boxes: dict[int, Box] = {
-            0: Box(dark=self.__dark),
-            1: Box(dark=self.__dark),
-            2: Box(dark=self.__dark),
-            3: Box(dark=self.__dark),
+        boxes: dict[int, list[Box]] = {
+            0: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
+            1: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
+            2: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
+            3: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
         }
+        box_cord = {"utility": 0, "entertainment": 1, "miscellaneous": 2}
 
         for module in modules:
+            box_index = box_cord.get(module.category, 2)
             if module.hidden:
                 continue
             icon = self.__get_module_icon(module)
@@ -73,11 +75,11 @@ class HelpMenu:
                 offset = 2
             status = self.__get_switch(module.pack, self.__field)
             status = int(status) + offset
-            boxes[status].add(
+            boxes[status][box_index].add(
                 module.name, module.description or "暂无描述", icon, COLOR_PALETTE[status]
             )
 
-        box_list = [boxes[0], boxes[1], boxes[2], boxes[3]]
+        box_list = [*boxes[0], *boxes[1], *boxes[2], *boxes[3]]
         return [box for box in box_list if box.has_content()]
 
     @staticmethod
