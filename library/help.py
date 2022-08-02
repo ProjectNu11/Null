@@ -208,7 +208,7 @@ class HelpMenu:
         elements.extend(self.load_custom_element())
 
         columns = [column1, column2]
-        if len(elements) > 6:
+        if len(elements) >= 9:
             columns.append(column3)
 
         for element in elements:
