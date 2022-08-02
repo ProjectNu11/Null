@@ -213,7 +213,7 @@ class HelpMenu:
 
         for element in elements:
             min(columns, key=lambda column: len(column)).add(element)
-        return [column for column in [column1, column2] if column.has_content()]
+        return [column for column in columns if column.has_content()]
 
     def compose(self) -> Image.Image:
         menu = OneUIMock(*self.compose_columns(), dark=self.__dark)
