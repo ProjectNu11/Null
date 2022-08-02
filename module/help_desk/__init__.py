@@ -9,14 +9,16 @@ from aiohttp import ClientSession
 from graia.ariadne import Ariadne
 from graia.ariadne.event.message import GroupMessage, FriendMessage, MessageEvent
 from graia.ariadne.message.chain import MessageChain
-from graia.ariadne.message.element import Image
+from graia.ariadne.message.element import Image, At
 from graia.ariadne.message.parser.twilight import (
     Twilight,
-    FullMatch,
     SpacePolicy,
     ArgumentMatch,
     ArgResult,
+    UnionMatch,
+    ElementMatch,
 )
+from graia.broadcast import PropagationCancelled
 from graia.saya import Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from loguru import logger
@@ -43,13 +45,17 @@ avatar_img: PillowImage.Image
         inline_dispatchers=[
             Twilight(
                 [
-                    FullMatch(config.func.prefix).space(SpacePolicy.NOSPACE),
-                    FullMatch("help"),
+                    ElementMatch(At, optional=True),
+                    UnionMatch(
+                        config.func.prefix, ".", "/", "?", "#", "。", "？", optional=True
+                    ).space(SpacePolicy.NOSPACE),
+                    UnionMatch("help", "帮助", "菜单"),
                     ArgumentMatch("-i", "--invalidate", action="store_true")
                     @ "invalidate",
                 ]
             )
         ],
+        priority=0,
     )
 )
 async def help_menu(app: Ariadne, event: MessageEvent, invalidate: ArgResult):
@@ -73,6 +79,7 @@ async def help_menu(app: Ariadne, event: MessageEvent, invalidate: ArgResult):
         event.sender.group if isinstance(event, GroupMessage) else event.sender,
         MessageChain([Image(data_bytes=menu)]),
     )
+    raise PropagationCancelled
 
 
 class GroupCache(BaseModel):

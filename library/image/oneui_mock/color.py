@@ -14,6 +14,16 @@ class Color:
     LINE_COLOR_LIGHT = (231, 231, 231)
     LINE_COLOR_DARK = (90, 90, 90)
 
+    HINT_COLOR_LIGHT = (232, 237, 243)
+    HINT_COLOR_DARK = (24, 38, 64)
+
+    HIGHLIGHT_COLOR_LIGHT = (72, 112, 206)
+    HIGHLIGHT_COLOR_DARK = (103, 143, 242)
+
+    SWITCH_ENABLE_COLOR = (58, 129, 255)
+    SWITCH_DISABLE_COLOR = (220, 220, 220)
+    SWITCH_DISABLE_COLOR_DARK = (147, 149, 140)
+
     def __setattr__(self, *_):
         raise AttributeError("Looks like you are trying to set a color value.")
 

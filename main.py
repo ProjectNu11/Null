@@ -9,8 +9,8 @@ from graia.saya.builtins.broadcast import BroadcastBehaviour
 from graia.scheduler import GraiaScheduler
 from graia.scheduler.saya.behaviour import GraiaSchedulerBehaviour
 
-from library.context import scheduler
 from library.config import config
+from library.context import scheduler
 
 ariadne = Ariadne(
     connection=ariadne_config(

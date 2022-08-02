@@ -7,7 +7,15 @@ from PIL import Image
 from library import config
 from library.image import IconUtil
 from library.image.oneui_mock.color import Color
-from library.image.oneui_mock.elements import Banner, Header, Box, Column, OneUIMock
+from library.image.oneui_mock.elements import (
+    Banner,
+    Header,
+    Box,
+    MenuBox,
+    HintBox,
+    Column,
+    OneUIMock,
+)
 from library.model import Module
 from library.util.switch import switch
 from module import modules
@@ -57,11 +65,27 @@ class HelpMenu:
             return IconUtil.get_icon("toy-brick", color=Color.FOREGROUND_COLOR_LIGHT)
 
     def compose_module_boxes(self) -> list[Box]:
-        boxes: dict[int, list[Box]] = {
-            0: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
-            1: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
-            2: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
-            3: [Box(dark=self.__dark), Box(dark=self.__dark), Box(dark=self.__dark)],
+        boxes: dict[int, list[MenuBox]] = {
+            0: [
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+            ],
+            1: [
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+            ],
+            2: [
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+            ],
+            3: [
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+                MenuBox(dark=self.__dark),
+            ],
         }
         box_cord = {"utility": 0, "entertainment": 1, "miscellaneous": 2}
 
@@ -88,7 +112,7 @@ class HelpMenu:
             status = config.func.default
         return status
 
-    def compose_module_summary_box(self) -> Box:
+    def compose_module_summary_box(self) -> MenuBox:
         total = len(modules)
         enabled = len(
             [
@@ -100,7 +124,7 @@ class HelpMenu:
         hidden = len([module for module in modules if module.hidden])
         unloaded = len([module for module in modules if not module.loaded])
 
-        box = Box(dark=self.__dark)
+        box = MenuBox(dark=self.__dark)
         box.add(
             text=f"已安装 {total} 个插件",
             description="包括本地安装及网络安装",
@@ -126,7 +150,7 @@ class HelpMenu:
                 text=f"已隐藏 {hidden} 个插件",
                 description="将不会显示，但是可被调用",
                 icon=IconUtil.get_icon("blur", color=Color.FOREGROUND_COLOR_LIGHT),
-                icon_color=COLOR_PALETTE[3],
+                icon_color=COLOR_PALETTE[2],
             )
         if unloaded:
             box.add(
@@ -140,7 +164,7 @@ class HelpMenu:
 
         return box
 
-    def load_custom_element(self) -> list[Box, Image.Image]:
+    def load_custom_element(self) -> list[MenuBox, Image.Image]:
         elements = []
         for file in custom_element_path.iterdir():
             if not file.name.startswith("UNIVERSAL-"):
@@ -151,7 +175,7 @@ class HelpMenu:
             if file.name.endswith(".pickle"):
                 with file.open("rb") as f:
                     element = pickle.load(f)
-                    if isinstance(element, (Box, Image.Image)):
+                    if isinstance(element, (MenuBox, Image.Image)):
                         elements.append(element)
                 continue
             if (
@@ -170,13 +194,25 @@ class HelpMenu:
         column1.add(summary_box)
 
         column2 = Column(dark=self.__dark)
+        column3 = Column(dark=self.__dark)
 
         elements = self.compose_module_boxes()
+        __hints = list(hints)
+        for hint in __hints:
+            if self.__dark:
+                hint.set_dark()
+                continue
+            hint.set_light()
+        elements.extend(__hints)
         elements.sort(key=lambda box: len(box))
         elements.extend(self.load_custom_element())
 
+        columns = [column1, column2]
+        if len(elements) > 6:
+            columns.append(column3)
+
         for element in elements:
-            min([column1, column2], key=lambda column: len(column)).add(element)
+            min(columns, key=lambda column: len(column)).add(element)
         return [column for column in [column1, column2] if column.has_content()]
 
     def compose(self) -> Image.Image:
@@ -186,3 +222,14 @@ class HelpMenu:
     async def async_compose(self) -> Image.Image:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.compose)
+
+
+hints: list[HintBox] = [
+    HintBox("插件管理器使用方法", "打开插件 插件名", "关闭插件 插件名"),
+    HintBox(
+        "本项目开源于以下 Github 仓库",
+        "项目本体 ProjectNu11/Project-Null",
+        "插件仓库 ProjectNu11/PN-Plugins",
+        "中心服务 ProjectNu11/PN-Hub",
+    ),
+]
