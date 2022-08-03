@@ -1,5 +1,6 @@
 import random
 from abc import ABC, abstractmethod
+from datetime import datetime
 
 from PIL import Image
 from PIL.Image import Resampling
@@ -990,3 +991,7 @@ class OneUIMock:
             _width += element.width + self.GRID_SIZE
 
         return canvas
+
+
+def is_dark() -> bool:
+    return not (6 < datetime.now().hour < 18)

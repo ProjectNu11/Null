@@ -5,6 +5,8 @@ from typing import Literal
 
 from PIL import ImageDraw, ImageFont, Image
 
+from .image import ImageUtil
+
 
 class TextUtil:
     def __int__(self):
@@ -219,3 +221,21 @@ class TextUtil:
         draw = ImageDraw.Draw(image)
         draw.text((0, 0), text, font=font, fill=color)
         return image
+
+    @staticmethod
+    def get_font(
+        font_size: int,
+        font_name: str = "sarasa-mono-sc-nerd-light.ttf",
+        variant: str = None,
+    ):
+        """
+        Get a font with the specified size, default to Sarasa Mono Nerd Light
+        Proxy for ImageUtil.get_font.
+
+        :param font_size: Size of the font
+        :param font_name: Name of the font, must be in the assets/fonts folder
+        :param variant: Variant of the font, must be in the assets/fonts folder
+        :return: Font with the specified size
+        """
+
+        return ImageUtil.get_font(font_size, font_name, variant)

@@ -1,5 +1,4 @@
 import pickle
-from datetime import datetime
 from hashlib import md5
 from io import BytesIO
 from pathlib import Path
@@ -27,6 +26,7 @@ from pydantic import BaseModel
 from library import config
 from library.depend import Permission
 from library.help import HelpMenu
+from library.image.oneui_mock.elements import is_dark
 from library.model import UserPerm
 from library.util.switch import switch
 from module import modules
@@ -176,10 +176,6 @@ class OneUIHelpMenu:
             )
             pickle_path.unlink(missing_ok=True)
             self.__init__()
-
-
-def is_dark() -> bool:
-    return not (6 < datetime.now().hour < 18)
 
 
 one_ui_help_menu = OneUIHelpMenu()
