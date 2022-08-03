@@ -898,12 +898,7 @@ class Column(Box):
                 size = (self.width, self.width * element.height // element.width)
                 element = element.resize(size, Resampling.LANCZOS)
                 element = ImageUtil.round_corners(element, radius=self.GRID_SIZE)
-                base = Image.new("RGBA", size, color=self.FOREGROUND_COLOR)
-                try:
-                    base.paste(element, mask=element)
-                except ValueError:
-                    base.paste(element)
-                self.__rendered.append(base)
+                self.__rendered.append(element)
                 self.LENGTH += 1
                 continue
             if not (rendered := element.render()):
