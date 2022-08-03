@@ -822,6 +822,7 @@ class Column(Box):
     """
 
     BACKGROUND_COLOR: tuple[int, int, int]
+    FOREGROUND_COLOR: tuple[int, int, int]
     LENGTH: int
 
     GRID_SIZE: int = 36
@@ -844,8 +845,10 @@ class Column(Box):
 
         if dark:
             self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
+            self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         else:
             self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
+            self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         self.LENGTH = 0
         self.width = width
         self.has_banner = False
@@ -878,10 +881,14 @@ class Column(Box):
         """
 
         if isinstance(element, Image.Image):
-            if self.width != DEFAULT_WIDTH:
-                size = (self.width, self.width * element.height // element.width)
-                element = element.resize(size, Resampling.LANCZOS)
-                element = ImageUtil.round_corners(element, radius=self.GRID_SIZE)
+            size = (self.width, self.width * element.height // element.width)
+            element = element.resize(size, Resampling.LANCZOS)
+            element = ImageUtil.round_corners(element, radius=self.GRID_SIZE)
+            base = Image.new("RGBA", size, color=self.FOREGROUND_COLOR)
+            try:
+                base.paste(element, mask=element)
+            except ValueError:
+                base.paste(element)
             self.__rendered.append(element)
             self.LENGTH += 1
             return
