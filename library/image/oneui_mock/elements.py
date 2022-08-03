@@ -889,7 +889,7 @@ class Column(Box):
                 base.paste(element, mask=element)
             except ValueError:
                 base.paste(element)
-            self.__rendered.append(element)
+            self.__rendered.append(base)
             self.LENGTH += 1
             return
         if not (rendered := element.render()):
