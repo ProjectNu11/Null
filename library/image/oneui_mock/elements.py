@@ -1,6 +1,7 @@
 import random
 from abc import ABC, abstractmethod
 from datetime import datetime
+from io import BytesIO
 
 from PIL import Image
 from PIL.Image import Resampling
@@ -76,7 +77,7 @@ class Banner(Element):
         text: str,
         icon: Image.Image | None = None,
         width: int = DEFAULT_WIDTH,
-        dark: bool = False,
+        dark: bool = None,
     ):
         """
         :param text: Text to display
@@ -87,6 +88,8 @@ class Banner(Element):
 
         if width <= self.HEIGHT:
             raise ValueError(f"Width must be greater than {self.HEIGHT}")
+        if dark is None:
+            dark = is_dark()
         if dark:
             self.set_dark()
         else:
@@ -177,7 +180,7 @@ class Header(Element):
         description: str,
         icon: Image.Image | None = None,
         width: int = DEFAULT_WIDTH,
-        dark: bool = False,
+        dark: bool = None,
     ):
         """
         :param text: Text to display
@@ -189,6 +192,8 @@ class Header(Element):
 
         if width <= self.HEIGHT:
             raise ValueError(f"Width must be greater than {self.HEIGHT}")
+        if dark is None:
+            dark = is_dark()
         if dark:
             self.set_dark()
         else:
@@ -315,7 +320,7 @@ class MenuBox(Box):
         icon: Image.Image | None = None,
         icon_color: tuple[int, int, int] = None,
         width: int = DEFAULT_WIDTH,
-        dark: bool = False,
+        dark: bool = None,
     ):
         """
         :param text: Text to display
@@ -329,6 +334,8 @@ class MenuBox(Box):
         super().__init__()
         if width <= self.HEIGHT:
             raise ValueError(f"Width must be greater than {self.HEIGHT}")
+        if dark is None:
+            dark = is_dark()
         if dark:
             self.set_dark()
         else:
@@ -510,7 +517,7 @@ class GeneralBox(Box):
         switch: bool | None = None,
         highlight: bool = False,
         width: int = DEFAULT_WIDTH,
-        dark: bool = False,
+        dark: bool = None,
     ):
         """
         :param text: Text to display
@@ -524,6 +531,8 @@ class GeneralBox(Box):
         self.__dark = dark
         if width <= self.STANDARD_HEIGHT:
             raise ValueError(f"Width must be greater than {self.STANDARD_HEIGHT}")
+        if dark is None:
+            dark = is_dark()
         if dark:
             self.set_dark()
         else:
@@ -737,7 +746,7 @@ class HintBox(Box):
         title: str | None,
         *hint: str,
         width: int = DEFAULT_WIDTH,
-        dark: bool = False,
+        dark: bool = None,
     ):
         """
         :param title: Title text
@@ -747,9 +756,11 @@ class HintBox(Box):
         """
 
         super().__init__()
-        self.__dark = dark
         if width <= self.STANDARD_HEIGHT:
             raise ValueError(f"Width must be greater than {self.STANDARD_HEIGHT}")
+        if dark is None:
+            dark = is_dark()
+        self.__dark = dark
         if dark:
             self.set_dark()
         else:
@@ -835,7 +846,7 @@ class Column(Box):
         self,
         *args: Element | Image.Image,
         width: int = DEFAULT_WIDTH,
-        dark: bool = False,
+        dark: bool = None,
     ):
         """
         :param args: The elements to display.
@@ -843,6 +854,8 @@ class Column(Box):
         :param dark: Whether the column is dark.
         """
 
+        if dark is None:
+            dark = is_dark()
         if dark:
             self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
             self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
@@ -872,37 +885,38 @@ class Column(Box):
     def has_content(self) -> bool:
         return self.LENGTH > 0
 
-    def add(self, element: Element | Image.Image):
+    def add(self, *elements: Element | Image.Image):
         """
         Add an element to the column.
 
-        :param element: The element to add, can be an element or an image.
+        :param elements: The element to add, can be an element or an image.
         :return: None
         """
 
-        if isinstance(element, Image.Image):
-            size = (self.width, self.width * element.height // element.width)
-            element = element.resize(size, Resampling.LANCZOS)
-            element = ImageUtil.round_corners(element, radius=self.GRID_SIZE)
-            base = Image.new("RGBA", size, color=self.FOREGROUND_COLOR)
-            try:
-                base.paste(element, mask=element)
-            except ValueError:
-                base.paste(element)
-            self.__rendered.append(base)
-            self.LENGTH += 1
-            return
-        if not (rendered := element.render()):
-            return
-        if isinstance(element, Element):
-            self.LENGTH += len(element)
-        else:
-            self.LENGTH += round(element.height / MenuBox.HEIGHT)
-        if isinstance(element, Banner):
-            self.has_banner = True
-            self.__rendered.insert(0, rendered)
-            return
-        self.__rendered.append(rendered)
+        for element in elements:
+            if isinstance(element, Image.Image):
+                size = (self.width, self.width * element.height // element.width)
+                element = element.resize(size, Resampling.LANCZOS)
+                element = ImageUtil.round_corners(element, radius=self.GRID_SIZE)
+                base = Image.new("RGBA", size, color=self.FOREGROUND_COLOR)
+                try:
+                    base.paste(element, mask=element)
+                except ValueError:
+                    base.paste(element)
+                self.__rendered.append(base)
+                self.LENGTH += 1
+                continue
+            if not (rendered := element.render()):
+                continue
+            if isinstance(element, Element):
+                self.LENGTH += len(element)
+            else:
+                self.LENGTH += round(element.height / MenuBox.HEIGHT)
+            if isinstance(element, Banner):
+                self.has_banner = True
+                self.__rendered.insert(0, rendered)
+                continue
+            self.__rendered.append(rendered)
 
     def render(self) -> Image.Image:
         width = self.width
@@ -949,12 +963,14 @@ class OneUIMock:
 
     __rendered: list[Image.Image]
 
-    def __init__(self, *args: Column, dark: bool = False):
+    def __init__(self, *args: Column, dark: bool = None):
         """
         :param args: The columns to display.
         :param dark: Whether the mockery is dark.
         """
 
+        if dark is None:
+            dark = is_dark()
         if dark:
             self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         else:
@@ -1001,6 +1017,15 @@ class OneUIMock:
             _width += element.width + self.GRID_SIZE
 
         return canvas
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
 
 
 def is_dark() -> bool:
