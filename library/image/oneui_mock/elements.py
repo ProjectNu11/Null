@@ -918,11 +918,14 @@ class Column(Box):
 
         canvas = Image.new("RGBA", (width, height), self.BACKGROUND_COLOR)
         for element in rendered:
-            canvas.paste(
-                element,
-                (0, _height),
-                mask=element,
-            )
+            try:
+                canvas.paste(
+                    element,
+                    (0, _height),
+                    mask=element,
+                )
+            except ValueError:
+                canvas.paste(element, (0, _height))
             _height += element.height + self.GRID_SIZE
 
         return canvas
