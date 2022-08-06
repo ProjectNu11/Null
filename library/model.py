@@ -99,7 +99,7 @@ class FunctionConfig(BaseModel):
     default: bool = False
     notice: bool = True
     notice_msg: str | None = "模块 {module.name} 已关闭，请联系管理员开启"
-    prefix: str = "."
+    prefix: list = [".", "。"]
     modules: dict[str, dict] = {}
 
     def __new__(cls, *args, **kwargs):
@@ -115,6 +115,10 @@ class FunctionConfig(BaseModel):
         if isinstance(cfg, BaseModel):
             cfg = cfg.dict()
         self.modules[module] = cfg
+
+    @validator("prefix", pre=True)
+    def prefix_check(cls, value):
+        return [value] if isinstance(value, str) else value
 
     @root_validator()
     def function_check(cls, values: dict):

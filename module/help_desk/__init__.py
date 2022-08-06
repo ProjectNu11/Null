@@ -47,7 +47,7 @@ avatar_img: PillowImage.Image
                 [
                     ElementMatch(At, optional=True),
                     UnionMatch(
-                        config.func.prefix, ".", "/", "?", "#", "。", "？", optional=True
+                        *config.func.prefix, ".", "/", "?", "#", "。", "？", optional=True
                     ).space(SpacePolicy.NOSPACE),
                     UnionMatch("help", "帮助", "菜单"),
                     ArgumentMatch("-i", "--invalidate", action="store_true")

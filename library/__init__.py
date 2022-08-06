@@ -1,6 +1,7 @@
 from datetime import time
 from pathlib import Path
 
+from graia.ariadne.message.parser.twilight import UnionMatch, SpacePolicy
 from loguru import logger
 
 from library.config import config
@@ -25,3 +26,7 @@ logger.add(
     encoding="utf-8",
     rotation=time(),
 )
+
+
+PrefixMatch = UnionMatch(*config.func.prefix).space(SpacePolicy.NOSPACE)
+print(PrefixMatch)
