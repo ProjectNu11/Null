@@ -29,4 +29,3 @@ logger.add(
 
 
 PrefixMatch = UnionMatch(*config.func.prefix).space(SpacePolicy.NOSPACE)
-print(PrefixMatch)
