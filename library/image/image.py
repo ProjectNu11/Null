@@ -50,15 +50,22 @@ class ImageUtil:
         )
 
     @staticmethod
-    def round_corners(img: Image.Image, radius: int):
+    def round_corners(
+        img: Image.Image, radius: int, *, add_white_background: bool = True
+    ):
         """
         Round the corners of an image
 
         :param img: Image to round corners of
         :param radius: Radius of the rounded corners
+        :param add_white_background: Whether to add a white_background
         :return: Image with rounded corners
         """
 
+        if add_white_background:
+            base = Image.new("RGB", img.size, "white")
+            base.paste(img)
+            img = base
         mask = Image.new("L", img.size, 0)
         draw = ImageDraw.Draw(mask)
         draw.rounded_rectangle((0, 0) + img.size, radius, fill=255)
