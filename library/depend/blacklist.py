@@ -29,7 +29,7 @@ class Blacklist:
             field = event.sender.group.id if isinstance(event, GroupMessage) else 0
             target = event.sender.id
             if target == 80000000 and not allow_anonymous:
-                if on_failure:
+                if on_anonymous:
                     await Ariadne.current().send_message(
                         event.sender.group
                         if isinstance(event, GroupMessage)
