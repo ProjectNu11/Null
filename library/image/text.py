@@ -74,21 +74,26 @@ class TextUtil:
             width, height = _.textsize(text, font=font)
             image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
             draw = ImageDraw.Draw(image)
-            draw.text((0, 0), text, font=font, fill=color)
+            bbox = draw.textbbox((0, 0), text, font=font)
+            draw.text((-bbox[0], -bbox[1]), text, font=font, fill=color)
             return image
         draw = ImageDraw.Draw(Image.new("RGBA", (1, 1), (0, 0, 0, 0)))
         pieces = list(cls.break_fix(text, width - 2, font, draw))
-        height = sum(p[2] for p in pieces)
+        image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
+        draw = ImageDraw.Draw(image)
+        bbox = draw.textbbox((0, 0), "\n".join([p[0] for p in pieces]), font=font)
+        height = bbox[3] - bbox[1]
         image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
-        y = (image.size[1] - height) // 2
+        y = -bbox[1]
         for text, _width, _height in pieces:
+            x = -bbox[0]
             if align == "left":
-                x = 0
+                x += 0
             elif align == "center":
-                x = (image.size[0] - _width) // 2
+                x += (image.size[0] - _width) // 2
             elif align == "right":
-                x = image.size[0] - _width
+                x += image.size[0] - _width
             else:
                 raise ValueError("align must be one of left, center, right")
             draw.text((x, y), text, font=font, fill=color)
@@ -219,7 +224,8 @@ class TextUtil:
         text_size = font.getsize_multiline(text)
         image = Image.new("RGBA", text_size, (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
-        draw.text((0, 0), text, font=font, fill=color)
+        bbox = draw.textbbox((0, 0), text, font=font)
+        draw.text((-bbox[0], -bbox[1]), text, font=font, fill=color)
         return image
 
     @staticmethod
