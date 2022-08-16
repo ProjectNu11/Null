@@ -2,6 +2,7 @@ import random
 from abc import ABC, abstractmethod
 from datetime import datetime
 from io import BytesIO
+from typing import Literal
 
 from PIL import Image
 from PIL.Image import Resampling
@@ -360,14 +361,14 @@ class MenuBox(Box):
     __text: list[str]
     __description: list[str]
     __icon: list[Image.Image | None]
-    __icon_color: list[tuple[int, int, int] | None]
+    __icon_color: list[tuple[int, int, int] | Literal[True] | None]
 
     def __init__(
         self,
         text: str = None,
         description: str = None,
         icon: Image.Image | None = None,
-        icon_color: tuple[int, int, int] = None,
+        icon_color: tuple[int, int, int] | Literal[True] | None = True,
         width: int = DEFAULT_WIDTH,
         dark: bool = None,
     ):
@@ -375,7 +376,7 @@ class MenuBox(Box):
         :param text: Text to display
         :param description: Description to display
         :param icon: Icon to display
-        :param icon_color: Color of the icon
+        :param icon_color: Color of the icon, True if random color
         :param width: Width of the box
         :param dark: Whether the box is dark or light
         """
@@ -432,7 +433,7 @@ class MenuBox(Box):
         text: str,
         description: str,
         icon: Image.Image | None = None,
-        icon_color: tuple[int, int, int] = None,
+        icon_color: tuple[int, int, int] | Literal[True] | None = None,
     ) -> "MenuBox":
         """
         Add an item to the box.
@@ -452,7 +453,7 @@ class MenuBox(Box):
 
     @staticmethod
     def render_icon(
-        icon: Image.Image | None, color: tuple[int, int, int] | None
+        icon: Image.Image | None, color: tuple[int, int, int] | Literal[True] | None
     ) -> Image.Image | None:
         """
         Render an icon.
@@ -464,11 +465,14 @@ class MenuBox(Box):
 
         if icon is None:
             return None
-        icon = IconUtil.replace_color(icon, (252, 252, 252))
-        if not color:
+        if isinstance(color, bool):
             palette = random.choice(PALETTE)
             _ = palette[1:]
             color = (int(_[:2], 16), int(_[2:4], 16), int(_[4:6], 16))
+        elif color is None:
+            size = ICON_BASE.size[0] // 4 * 3, ICON_BASE.size[1] // 4 * 3
+            return icon.resize(size, Resampling.LANCZOS)
+        icon = IconUtil.replace_color(icon, (252, 252, 252))
         base = IconUtil.replace_color(ICON_BASE, color)
         size = base.size[0] // 3 * 2, base.size[1] // 3 * 2
         icon = icon.resize(size, Resampling.LANCZOS)
