@@ -37,6 +37,16 @@ class Element(ABC):
         pass
 
     @abstractmethod
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
+
+    @abstractmethod
     def set_dark(self):
         pass
 
@@ -140,6 +150,15 @@ class Banner(Element):
         )
 
         return canvas
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
 
 
 class Header(Element):
@@ -260,6 +279,15 @@ class Header(Element):
         canvas = ImageUtil.round_corners(canvas, radius=self.LEFT_BOARDER)
         return canvas
 
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
+
 
 class Box(Element):
     @abstractmethod
@@ -376,7 +404,7 @@ class MenuBox(Box):
         description: str,
         icon: Image.Image | None = None,
         icon_color: tuple[int, int, int] = None,
-    ):
+    ) -> "MenuBox":
         """
         Add an item to the box.
 
@@ -384,13 +412,14 @@ class MenuBox(Box):
         :param description: The description to display.
         :param icon: The icon to display.
         :param icon_color: The color of the icon.
-        :return: None
+        :return: The box itself.
         """
 
         self.__text.append(text)
         self.__description.append(description)
         self.__icon.append(icon)
         self.__icon_color.append(icon_color)
+        return self
 
     @staticmethod
     def render_icon(
@@ -469,6 +498,15 @@ class MenuBox(Box):
 
         canvas = ImageUtil.round_corners(canvas, radius=self.ICON_BOARDER)
         return canvas
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
 
 
 class GeneralBox(Box):
@@ -577,18 +615,20 @@ class GeneralBox(Box):
         description: str | None,
         switch: bool | None = None,
         highlight: bool | None = None,
-    ):
+    ) -> "GeneralBox":
         """
         Add a new item to the box.
         :param text: Text to display
         :param description: Description to display
         :param switch: Switch to display
         :param highlight: Whether the item is highlighted
+        :return: The box itself
         """
         self.__text.append(text)
         self.__description.append(description)
         self.__switch.append(switch)
         self.__highlight.append(highlight)
+        return self
 
     def render_item(
         self,
@@ -711,6 +751,15 @@ class GeneralBox(Box):
         canvas = ImageUtil.round_corners(canvas, radius=self.LEFT_BOARDER)
         return canvas
 
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
+
 
 class HintBox(Box):
     """
@@ -786,8 +835,9 @@ class HintBox(Box):
     def has_content(self) -> bool:
         return len(self.__hints) + bool(self.__title) > 0
 
-    def add(self, *hints: str):
+    def add(self, *hints: str) -> "HintBox":
         self.__hints.extend(hints)
+        return self
 
     def render(self) -> Image.Image | None:
         if not self.has_content():
@@ -825,6 +875,15 @@ class HintBox(Box):
 
         canvas = ImageUtil.round_corners(canvas, radius=self.LEFT_BOARDER)
         return canvas
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
 
 
 class Column(Box):
@@ -885,12 +944,12 @@ class Column(Box):
     def has_content(self) -> bool:
         return self.LENGTH > 0
 
-    def add(self, *elements: Element | Image.Image):
+    def add(self, *elements: Element | Image.Image) -> "Column":
         """
         Add an element to the column.
 
         :param elements: The element to add, can be an element or an image.
-        :return: None
+        :return: The column itself.
         """
 
         for element in elements:
@@ -909,9 +968,8 @@ class Column(Box):
                 self.LENGTH += round(element.height / MenuBox.HEIGHT)
             if isinstance(element, Banner):
                 self.has_banner = True
-                self.__rendered.insert(0, rendered)
-                continue
             self.__rendered.append(rendered)
+        return self
 
     def render(self) -> Image.Image:
         width = self.width
@@ -946,6 +1004,15 @@ class Column(Box):
 
         return canvas
 
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
+
 
 class OneUIMock:
     """
@@ -974,16 +1041,17 @@ class OneUIMock:
         for element in args:
             self.add(element)
 
-    def add(self, element: Column):
+    def add(self, element: Column) -> "OneUIMock":
         """
         Add a column to the mockery.
 
         :param element: The column to add.
-        :return: None
+        :return: The mockery itself.
         """
 
         rendered = element.render()
         self.__rendered.append(rendered)
+        return self
 
     def render(self) -> Image.Image:
         """
