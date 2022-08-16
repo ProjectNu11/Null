@@ -349,7 +349,7 @@ class Module(BaseModel):
     author: list[str] = ["Unknown"]
     pypi: bool = False
     category: Literal[
-        "utility", "entertainment", "dependency", "miscellaneous"
+        "utility", "entertainment", "dependency", "miscellaneous", "essential"
     ] = "miscellaneous"
     description: str = ""
     dependency: list[str] = None

@@ -27,6 +27,10 @@ class Element(ABC):
         pass
 
     @abstractmethod
+    def __hash__(self):
+        pass
+
+    @abstractmethod
     def render(self) -> Image.Image:
         """
         Render the element.
@@ -121,6 +125,9 @@ class Banner(Element):
     def __len__(self) -> int:
         return 1
 
+    def __hash__(self):
+        return hash(self.__text + str(hash(self.__icon)))
+
     def render(self) -> Image.Image:
         canvas = Image.new("RGBA", (self.WIDTH, self.HEIGHT), self.BACKGROUND_COLOR)
         font = ImageUtil.get_font(self.TEXT_SIZE)
@@ -145,7 +152,7 @@ class Banner(Element):
 
         canvas.paste(
             text,
-            (self.TEXT_X, self.TEXT_Y),
+            (self.TEXT_X + int(self.TEXT_HEIGHT * 0.1), self.TEXT_Y),
             mask=text,
         )
 
@@ -237,6 +244,9 @@ class Header(Element):
     def __len__(self) -> int:
         return 1
 
+    def __hash__(self):
+        return hash(self.__text + self.__description + str(hash(self.__icon)))
+
     def render(self) -> Image.Image:
         canvas = Image.new("RGBA", (self.WIDTH, self.HEIGHT), self.FOREGROUND_COLOR)
         font = ImageUtil.get_font(int(self.TEXT_HEIGHT * 0.8))
@@ -269,10 +279,17 @@ class Header(Element):
                     mask=self.__icon.convert("L"),
                 )
 
-        canvas.paste(text, (self.LEFT_BOARDER, self.UP_BOARDER), mask=text)
+        canvas.paste(
+            text,
+            (self.LEFT_BOARDER, self.UP_BOARDER + int(self.TEXT_HEIGHT * 0.1)),
+            mask=text,
+        )
         canvas.paste(
             description,
-            (self.LEFT_BOARDER, self.UP_BOARDER + self.TEXT_HEIGHT),
+            (
+                self.LEFT_BOARDER,
+                self.UP_BOARDER + self.TEXT_HEIGHT + int(self.DESCRIPTION_HEIGHT * 0.1),
+            ),
             mask=description,
         )
 
@@ -292,6 +309,10 @@ class Header(Element):
 class Box(Element):
     @abstractmethod
     def __len__(self):
+        pass
+
+    @abstractmethod
+    def __hash__(self):
         pass
 
     @abstractmethod
@@ -395,6 +416,14 @@ class MenuBox(Box):
     def __len__(self) -> int:
         return len(self.__text)
 
+    def __hash__(self):
+        return hash(
+            str(self.__text)
+            + str(self.__description)
+            + "".join([str(hash(icon)) for icon in self.__icon])
+            + str(self.__icon_color)
+        )
+
     def has_content(self) -> bool:
         return len(self.__text) > 0
 
@@ -472,7 +501,7 @@ class MenuBox(Box):
                 text,
                 (
                     self.LEFT_BOARDER,
-                    self.UP_BOARDER + index * self.HEIGHT,
+                    self.UP_BOARDER + index * self.HEIGHT + int(self.TEXT_HEIGHT * 0.1),
                 ),
                 mask=text,
             )
@@ -480,7 +509,10 @@ class MenuBox(Box):
                 description,
                 (
                     self.LEFT_BOARDER,
-                    self.UP_BOARDER + index * self.HEIGHT + self.TEXT_HEIGHT,
+                    self.UP_BOARDER
+                    + index * self.HEIGHT
+                    + self.TEXT_HEIGHT
+                    + int(self.DESCRIPTION_HEIGHT * 0.1),
                 ),
                 mask=description,
             )
@@ -606,6 +638,14 @@ class GeneralBox(Box):
     def __len__(self):
         return len(self.__text)
 
+    def __hash__(self):
+        return hash(
+            str(self.__text)
+            + str(self.__description)
+            + str(self.__switch)
+            + str(self.__highlight)
+        )
+
     def has_content(self) -> bool:
         return len(self.__text) > 0
 
@@ -669,7 +709,7 @@ class GeneralBox(Box):
         )
         canvas.paste(
             text_img,
-            (self.LEFT_BOARDER, self.UP_BOARDER),
+            (self.LEFT_BOARDER, self.UP_BOARDER + int(self.TEXT_HEIGHT * 0.1)),
             mask=text_img,
         )
         if description_img:
@@ -677,7 +717,10 @@ class GeneralBox(Box):
                 description_img,
                 (
                     self.LEFT_BOARDER,
-                    self.UP_BOARDER + text_img.height + self.DESCRIPTION_OFFSET_Y,
+                    self.UP_BOARDER
+                    + text_img.height
+                    + self.DESCRIPTION_OFFSET_Y
+                    + int(self.DESCRIPTION_HEIGHT * 0.1),
                 ),
                 mask=description_img,
             )
@@ -832,6 +875,9 @@ class HintBox(Box):
     def __len__(self):
         return len(self.__hints) + bool(self.__title)
 
+    def __hash__(self):
+        return hash(self.__title + str(self.__hints))
+
     def has_content(self) -> bool:
         return len(self.__hints) + bool(self.__title) > 0
 
@@ -941,14 +987,18 @@ class Column(Box):
     def __len__(self):
         return self.LENGTH
 
+    def __hash__(self):
+        return hash("".join([str(hash(rendered)) for rendered in self.__rendered]))
+
     def has_content(self) -> bool:
         return self.LENGTH > 0
 
-    def add(self, *elements: Element | Image.Image) -> "Column":
+    def add(self, *elements: Element | Image.Image, dark: bool = None) -> "Column":
         """
         Add an element to the column.
 
         :param elements: The element to add, can be an element or an image.
+        :param dark: Override dark mode, None if not override.
         :return: The column itself.
         """
 
@@ -960,6 +1010,11 @@ class Column(Box):
                 self.__rendered.append(element)
                 self.LENGTH += 1
                 continue
+            if dark is not None:
+                if dark:
+                    element.set_dark()
+                else:
+                    element.set_light()
             if not (rendered := element.render()):
                 continue
             if isinstance(element, Element):

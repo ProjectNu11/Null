@@ -6,8 +6,8 @@
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "category": "utility",
-    "description": "",
+    "category": "essential",
+    "description": "管理插件的安装、卸载、开关",
     "dependency": [
         "module.hub_service"
     ],

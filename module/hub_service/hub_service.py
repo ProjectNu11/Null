@@ -92,7 +92,7 @@ class HubService:
             if bots := await resp.json():
                 ariadne = Ariadne.current()
                 group_list = [g.id for g in await ariadne.get_group_list()]
-                friend_list = [f.id for f in await ariadne.get_friendList()]
+                friend_list = [f.id for f in await ariadne.get_friend_list()]
                 for bot in bots:
                     if self.notify_missing(bot, group_list, friend_list):
                         await self.notified_missing(bot["id"])

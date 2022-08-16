@@ -19,6 +19,8 @@ from graia.saya.builtins.broadcast import ListenerSchema
 
 from library.config import config
 from library.depend import Permission, FunctionCall
+from library.help import HelpMenu
+from library.image.oneui_mock.elements import HintBox
 from library.model import UserPerm
 from library.util.switch import switch
 from module import modules as __modules
@@ -365,3 +367,6 @@ def reload_metadata() -> NoReturn:
 @channel.use(ListenerSchema(listening_events=[ApplicationLaunched]))
 async def init():
     await db_init()
+
+
+HelpMenu.register_box(HintBox("插件管理器使用方法", "打开插件 插件名", "关闭插件 插件名"))

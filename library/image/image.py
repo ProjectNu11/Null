@@ -4,6 +4,8 @@ from pathlib import Path
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 from loguru import logger
 
+DEFAULT_FONT = "HarmonyOS_Sans_SC_Regular.ttf"
+
 
 class ImageUtil:
     def __int__(self):
@@ -341,7 +343,7 @@ class ImageUtil:
     @staticmethod
     def get_font(
         font_size: int,
-        font_name: str = "sarasa-mono-sc-nerd-light.ttf",
+        font_name: str = DEFAULT_FONT,
         variant: str = None,
     ):
         """

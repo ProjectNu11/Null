@@ -1,4 +1,5 @@
 import asyncio
+import itertools
 import pickle
 from pathlib import Path
 
@@ -18,7 +19,7 @@ from library.image.oneui_mock.elements import (
 )
 from library.model import Module
 from library.util.switch import switch
-from module import modules
+from module import modules, CATEGORIES
 
 custom_element_path = Path(config.path.data, "library", "help")
 custom_element_path.mkdir(exist_ok=True)
@@ -37,6 +38,8 @@ class HelpMenu:
     __header: Header
     __field: int
     __dark: bool
+
+    __registered_boxes: set[Box | Image.Image] = set()
 
     def __init__(
         self,
@@ -66,33 +69,21 @@ class HelpMenu:
 
     def compose_module_boxes(self) -> list[Box]:
         boxes: dict[int, list[MenuBox]] = {
-            0: [
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-            ],
-            1: [
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-            ],
-            2: [
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-            ],
-            3: [
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-                MenuBox(dark=self.__dark),
-            ],
+            0: [],
+            1: [],
+            2: [],
+            3: [],
         }
-        box_cord = {"utility": 0, "entertainment": 1, "miscellaneous": 2}
+        for box_list, _ in itertools.product(boxes.values(), CATEGORIES):
+            box_list.append(MenuBox())
+        box_cord = {key: value for value, key in enumerate(CATEGORIES)}
+
+        misc_index = CATEGORIES.index("miscellaneous")
 
         for module in modules:
-            box_index = box_cord.get(module.category, 2)
             if module.hidden:
                 continue
+            box_index = box_cord.get(module.category, misc_index)
             icon = self.__get_module_icon(module)
             offset = 0
             if not module.loaded:
@@ -197,13 +188,8 @@ class HelpMenu:
         column3 = Column(dark=self.__dark)
 
         elements = self.compose_module_boxes()
-        __hints = list(hints)
-        for hint in __hints:
-            if self.__dark:
-                hint.set_dark()
-                continue
-            hint.set_light()
-        elements.extend(__hints)
+
+        elements.extend(self.__registered_boxes)
         elements.sort(key=lambda box: len(box))
         elements.extend(self.load_custom_element())
 
@@ -212,7 +198,7 @@ class HelpMenu:
             columns.append(column3)
 
         for element in elements:
-            min(columns, key=lambda column: len(column)).add(element)
+            min(columns, key=lambda column: len(column)).add(element, dark=self.__dark)
         return [column for column in columns if column.has_content()]
 
     def compose(self) -> Image.Image:
@@ -223,13 +209,26 @@ class HelpMenu:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.compose)
 
+    @classmethod
+    def register_box(cls, *elements: Box | Image.Image):
+        for element in elements:
+            element_hash = hash(element)
+            if bool(
+                list(filter(lambda x: hash(x) == element_hash, cls.__registered_boxes))
+            ):
+                continue
+            cls.__registered_boxes.add(element)
 
-hints: list[HintBox] = [
-    HintBox("插件管理器使用方法", "打开插件 插件名", "关闭插件 插件名"),
+    @classmethod
+    def unregister_all(cls):
+        cls.__registered_boxes.clear()
+
+
+HelpMenu.register_box(
     HintBox(
         "本项目开源于以下 Github 仓库",
         "项目本体 ProjectNu11/Project-Null",
         "插件仓库 ProjectNu11/PN-Plugins",
         "中心服务 ProjectNu11/PN-Hub",
     ),
-]
+)

@@ -14,6 +14,8 @@ from library import config
 from library.model import Module
 from library.util.dependency import install_dependency
 
+CATEGORIES = ["utility", "entertainment", "dependency", "miscellaneous", "essential"]
+
 
 class Modules:
     """

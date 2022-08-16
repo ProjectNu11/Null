@@ -6,10 +6,11 @@
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "category": "utility",
-    "description": "",
+    "category": "essential",
+    "description": "Project. Null 数据中心服务",
     "dependency": null,
     "loaded": true,
+    "hidden": false,
     "override_default": true,
     "override_switch": true
 }
