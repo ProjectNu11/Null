@@ -19,17 +19,22 @@ class FunctionCall:
         """
 
         async def function_call_record(event: MessageEvent) -> NoReturn:
-            await cls.add_record(pack, event)
+            await cls.add_record(
+                pack=pack,
+                field=event.sender.group.id if isinstance(event, GroupMessage) else 0,
+                supplicant=event.sender.id,
+            )
 
         return Depend(function_call_record)
 
     @staticmethod
-    async def add_record(pack: str, event: MessageEvent) -> NoReturn:
+    async def add_record(pack: str, field: int, supplicant: int) -> NoReturn:
         """
         Add function call record.
 
         :param pack: Package name.
-        :param event: Message event.
+        :param field: Field.
+        :param supplicant: Supplicant.
         :return: NoReturn.
         """
 
@@ -37,10 +42,8 @@ class FunctionCall:
             FunctionCallRecord,
             {
                 "time": datetime.now(),
-                "field": event.sender.group.id
-                if isinstance(event, GroupMessage)
-                else 0,
-                "supplicant": event.sender.id,
+                "field": field,
+                "supplicant": supplicant,
                 "function": pack,
             },
         )

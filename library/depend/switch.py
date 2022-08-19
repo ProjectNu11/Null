@@ -73,3 +73,19 @@ class Switch:
                 raise
 
         return Depend(switch_check)
+
+    @staticmethod
+    def manually_check(pack: str, event: MessageEvent) -> bool:
+        """
+        Check switch manually.
+
+        :param pack: Package name.
+        :param event: Message event.
+        :return: Whether the switch is on.
+        """
+
+        value = switch.get(
+            pack=pack,
+            group=event.sender.group if isinstance(event, GroupMessage) else None,
+        )
+        return value if isinstance(value, bool) else config.func.default

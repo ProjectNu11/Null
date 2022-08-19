@@ -50,6 +50,4 @@ class Permission:
             user_perm = getattr(UserPerm, str(event.sender.permission))
         else:
             user_perm = UserPerm.MEMBER
-        if user_perm < permission:
-            return False
-        return True
+        return user_perm >= permission
