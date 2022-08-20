@@ -14,8 +14,6 @@ from library import config
 from library.model import Module
 from library.util.dependency import install_dependency
 
-CATEGORIES = ["utility", "entertainment", "dependency", "miscellaneous", "essential"]
-
 
 class Modules:
     """
@@ -346,9 +344,7 @@ class Modules:
 
         if field is None:
             field = self.__all__
-        if module := list(filter(func, field)):
-            return module
-        return []
+        return module if (module := list(filter(func, field))) else []
 
     def __search_by_name(self, name: str, field: list[Module] = None) -> list[Module]:
         """
@@ -552,3 +548,5 @@ class ModuleMetadata:
 
 
 modules = Modules()
+
+CATEGORIES = sorted(list({_.category for _ in modules}))

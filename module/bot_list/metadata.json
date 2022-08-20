@@ -1,0 +1,16 @@
+{
+    "name": "机器人列表",
+    "pack": "module.bot_list",
+    "version": "0.1",
+    "author": [
+        "nullqwertyuiop"
+    ],
+    "pypi": false,
+    "category": "essential",
+    "description": "搜索当前聊天区域所有已注册的机器人",
+    "dependency": null,
+    "loaded": true,
+    "hidden": false,
+    "override_default": true,
+    "override_switch": null
+}

@@ -177,7 +177,7 @@ class DatabaseConfig(BaseModel):
             "MySQL:\tmysql+aiomysql://user:password@localhost:3306/database\n"
             "SQLite:\tsqlite+aiosqlite:///data/data.db"
         )
-        assert link != "", f"Database link can't be blank\n{example}"
+        assert link, f"Database link can't be blank\n{example}"
         assert any(
             [
                 link.startswith("mysql+aiomysql://"),
@@ -188,11 +188,11 @@ class DatabaseConfig(BaseModel):
 
     @root_validator()
     def config_check(cls, value: dict):
-        if value.get("link", None).startswith("mysql+aiomysql://") and not value.get(
+        if value.get("link", "").startswith("mysql+aiomysql://") and not value.get(
             "config", None
         ):
             value["config"] = MySQLConfig()
-        elif value.get("link", None).startswith(
+        elif value.get("link", "").startswith(
             "sqlite+aiosqlite:///data/data.db"
         ) and value.get("config", None):
             value["config"] = None
@@ -348,9 +348,7 @@ class Module(BaseModel):
     version: str = "Unknown"
     author: list[str] = ["Unknown"]
     pypi: bool = False
-    category: Literal[
-        "utility", "entertainment", "dependency", "miscellaneous", "essential"
-    ] = "miscellaneous"
+    category: str = "miscellaneous"
     description: str = ""
     dependency: list[str] = None
     loaded: bool = True
