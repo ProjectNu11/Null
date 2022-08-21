@@ -16,6 +16,7 @@ from library.image.oneui_mock.elements import (
     HintBox,
     Column,
     OneUIMock,
+    GeneralBox,
 )
 from library.model import Module
 from library.util.switch import switch
@@ -156,6 +157,14 @@ class HelpMenu:
 
         return box
 
+    def get_switch_box(self) -> GeneralBox:
+        return GeneralBox(
+            text="默认插件开关",
+            description="是否默认打开所有插件",
+            switch=config.func.default,
+            dark=self.__dark,
+        ).add(text="开关提醒", description="插件关闭时被调用是否发送提醒", switch=config.func.notice)
+
     def load_custom_element(self) -> list[MenuBox, Image.Image]:
         elements = []
         for file in custom_element_path.iterdir():
@@ -189,7 +198,7 @@ class HelpMenu:
         column3 = Column(dark=self.__dark)
 
         elements = self.compose_module_boxes()
-
+        elements.append(self.get_switch_box())
         elements.extend(self.__registered_boxes)
         elements.sort(key=lambda box: len(box))
         elements.extend(self.load_custom_element())

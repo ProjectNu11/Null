@@ -13,9 +13,16 @@ from graia.scheduler import timers
 from graia.scheduler.saya import SchedulerSchema
 from loguru import logger
 
-from library import PrefixMatch
+from library import PrefixMatch, config
 from library.depend import Blacklist, FunctionCall
-from library.image.oneui_mock.elements import GeneralBox, Column, Banner, OneUIMock
+from library.help import HelpMenu
+from library.image.oneui_mock.elements import (
+    GeneralBox,
+    Column,
+    Banner,
+    OneUIMock,
+    HintBox,
+)
 from library.util.blacklist.bot import bot_list, Bot
 
 channel = Channel.current()
@@ -81,3 +88,10 @@ def generate_bot_summary(group: Group, *bots: Bot) -> bytes:
 async def bot_list_fetch_update():
     await bot_list.update()
     logger.success("更新机器人列表成功")
+
+
+HelpMenu.register_box(
+    HintBox(
+        "本项目默认不响应其他机器人的指令", f'可发送 "{config.func.prefix[0]}botlist check" 查看本群是否有其他机器人'
+    )
+)

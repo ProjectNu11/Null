@@ -369,4 +369,4 @@ async def init():
     await db_init()
 
 
-HelpMenu.register_box(HintBox("插件管理器使用方法", "打开插件 插件名", "关闭插件 插件名"))
+HelpMenu.register_box(HintBox("插件管理器使用方法", "插件打开 插件名", "插件关闭 插件名"))
