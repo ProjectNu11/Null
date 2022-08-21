@@ -19,7 +19,7 @@ from library.image.oneui_mock.elements import (
 )
 from library.model import Module
 from library.util.switch import switch
-from module import modules, CATEGORIES
+from module import modules
 
 custom_element_path = Path(config.path.data, "library", "help")
 custom_element_path.mkdir(exist_ok=True)
@@ -74,16 +74,17 @@ class HelpMenu:
             2: [],
             3: [],
         }
-        for box_list, _ in itertools.product(boxes.values(), CATEGORIES):
-            box_list.append(MenuBox())
-        box_cord = {key: value for value, key in enumerate(CATEGORIES)}
 
-        misc_index = CATEGORIES.index("miscellaneous")
+        categories = modules.get_categories()
+
+        for box_list, _ in itertools.product(boxes.values(), categories):
+            box_list.append(MenuBox())
+        box_cord = {key: value for value, key in enumerate(categories)}
 
         for module in modules:
             if module.hidden:
                 continue
-            box_index = box_cord.get(module.category, misc_index)
+            box_index = box_cord.get(module.category, 0)
             icon = self.__get_module_icon(module)
             offset = 0
             if not module.loaded:

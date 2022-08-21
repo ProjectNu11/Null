@@ -1,7 +1,7 @@
 import json
 from enum import Enum
 from pathlib import Path
-from typing import Literal, NoReturn
+from typing import NoReturn
 
 from loguru import logger
 from pydantic import BaseModel, AnyHttpUrl, root_validator, validator

@@ -467,6 +467,15 @@ class Modules:
 
         return self.__search(lambda x: x.loaded == loaded, field)
 
+    def get_categories(self) -> list[str]:
+        """
+        Get all categories.
+
+        :return: List of categories.
+        """
+
+        return sorted(list({module.category for module in self.__all__}))
+
 
 class ModuleMetadata:
     def __new__(cls, *args, **kwargs):
@@ -548,5 +557,3 @@ class ModuleMetadata:
 
 
 modules = Modules()
-
-CATEGORIES = sorted(list({_.category for _ in modules}))
