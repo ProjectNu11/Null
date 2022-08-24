@@ -4,18 +4,21 @@ title: "[BUG] <title>"
 labels: [bug]
 body:
 - type: textarea
+  id: error
   attributes:
     label: 出错内容
     description: 简要概述错误内容
   validations:
     required: false
 - type: textarea
+  id: expected
   attributes:
     label: 预期行为
     description: 简要概述你的预期结果
   validations:
     required: false
 - type: textarea
+  id: reproduce
   attributes:
     label: 复现方法
     description: 阐明如何复现该错误
@@ -27,6 +30,7 @@ body:
   validations:
     required: false
 - type: textarea
+  id: enviroment
   attributes:
     label: 环境
     description: |
@@ -46,6 +50,7 @@ body:
   validations:
     required: false
 - type: textarea
+  id: other
   attributes:
     label: 其他内容
     description: 你可以在此处拖拽上传图片或日志
