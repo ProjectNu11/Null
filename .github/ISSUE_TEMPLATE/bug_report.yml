@@ -1,5 +1,6 @@
 name: 🐞 Bug
 description: 反馈一个 Bug
+assignees: [nullqwertyuiop]
 title: "[BUG] <title>"
 labels: [bug]
 body:
