@@ -1,13 +1,13 @@
 {
     "name": "帮助菜单",
     "pack": "module.help_desk",
-    "version": "0.1",
+    "version": "0.1.1",
     "author": [
         "nullqwertyuiop"
     ],
     "pypi": false,
     "category": "utility",
-    "description": "生成帮助菜单",
+    "description": "生成帮助菜单及免责声明",
     "dependency": null,
     "loaded": true,
     "hidden": false,

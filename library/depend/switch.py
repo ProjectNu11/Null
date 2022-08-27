@@ -19,6 +19,7 @@ class Switch:
     def check(
         pack: str,
         override_level: UserPerm = None,
+        global_only: bool = False,
         no_notice: bool = False,
         on_failure: MessageChain = None,
         log: bool = True,
@@ -28,6 +29,7 @@ class Switch:
 
         :param pack: Package name.
         :param override_level: Override user permission.
+        :param global_only: Only check global switch. (To be implemented)
         :param no_notice: Disable notice.
         :param on_failure: Message chain to send when switch is off.
         :param log: Whether to log the call.

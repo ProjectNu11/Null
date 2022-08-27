@@ -1,5 +1,6 @@
 import asyncio
 import itertools
+import math
 import pickle
 from pathlib import Path
 
@@ -13,10 +14,11 @@ from library.image.oneui_mock.elements import (
     Header,
     Box,
     MenuBox,
-    HintBox,
     Column,
     OneUIMock,
     GeneralBox,
+    Element,
+    is_dark,
 )
 from library.model import Module
 from library.util.switch import switch
@@ -35,12 +37,12 @@ COLOR_PALETTE = {
 
 
 class HelpMenu:
-    __banner: Banner
-    __header: Header
-    __field: int
-    __dark: bool
+    banner: Banner
+    header: Header
+    field: int
+    dark: bool
 
-    __registered_boxes: set[Box | Image.Image] = set()
+    registered_boxes: set[Box | Image.Image] = set()
 
     def __init__(
         self,
@@ -50,15 +52,15 @@ class HelpMenu:
         banner: str = "帮助菜单",
         dark: bool = False,
     ) -> None:
-        self.__banner = Banner(banner, dark=dark)
-        self.__header = Header(
+        self.banner = Banner(banner, dark=dark)
+        self.header = Header(
             text=f"{config.name}#{config.num}",
             description=config.description,
             icon=avatar,
             dark=dark,
         )
-        self.__field = field
-        self.__dark = dark
+        self.field = field
+        self.dark = dark
 
     @staticmethod
     def __get_module_icon(module: Module) -> Image.Image:
@@ -90,7 +92,7 @@ class HelpMenu:
             offset = 0
             if not module.loaded:
                 offset = 2
-            status = self.__get_switch(module.pack, self.__field)
+            status = self.__get_switch(module.pack, self.field)
             status = int(status) + offset
             boxes[status][box_index].add(
                 module.name, module.description or "暂无描述", icon, COLOR_PALETTE[status]
@@ -108,16 +110,12 @@ class HelpMenu:
     def compose_module_summary_box(self) -> MenuBox:
         total = len(modules)
         enabled = len(
-            [
-                module
-                for module in modules
-                if self.__get_switch(module.pack, self.__field)
-            ]
+            [module for module in modules if self.__get_switch(module.pack, self.field)]
         )
         hidden = len([module for module in modules if module.hidden])
         unloaded = len([module for module in modules if not module.loaded])
 
-        box = MenuBox(dark=self.__dark)
+        box = MenuBox(dark=self.dark)
         box.add(
             text=f"已安装 {total} 个插件",
             description="包括本地安装及网络安装",
@@ -162,16 +160,16 @@ class HelpMenu:
             text="默认插件开关",
             description="是否默认打开所有插件",
             switch=config.func.default,
-            dark=self.__dark,
+            dark=self.dark,
         ).add(text="开关提醒", description="插件关闭时被调用是否发送提醒", switch=config.func.notice)
 
     def load_custom_element(self) -> list[MenuBox, Image.Image]:
         elements = []
         for file in custom_element_path.iterdir():
             if not file.name.startswith("UNIVERSAL-"):
-                if self.__dark and not file.name.startswith("DARK-"):
+                if self.dark and not file.name.startswith("DARK-"):
                     continue
-                if not self.__dark and file.name.startswith("DARK-"):
+                if not self.dark and file.name.startswith("DARK-"):
                     continue
             if file.name.endswith(".pickle"):
                 with file.open("rb") as f:
@@ -188,18 +186,18 @@ class HelpMenu:
         return elements
 
     def compose_columns(self) -> list[Column]:
-        column1 = Column(dark=self.__dark)
-        column1.add(self.__banner)
-        column1.add(self.__header)
+        column1 = Column(dark=self.dark)
+        column1.add(self.banner)
+        column1.add(self.header)
         summary_box = self.compose_module_summary_box()
         column1.add(summary_box)
 
-        column2 = Column(dark=self.__dark)
-        column3 = Column(dark=self.__dark)
+        column2 = Column(dark=self.dark)
+        column3 = Column(dark=self.dark)
 
         elements = self.compose_module_boxes()
         elements.append(self.get_switch_box())
-        elements.extend(self.__registered_boxes)
+        elements.extend(self.registered_boxes)
         elements.sort(key=lambda box: len(box))
         elements.extend(self.load_custom_element())
 
@@ -208,11 +206,11 @@ class HelpMenu:
             columns.append(column3)
 
         for element in elements:
-            min(columns, key=lambda column: len(column)).add(element, dark=self.__dark)
+            min(columns, key=lambda column: len(column)).add(element, dark=self.dark)
         return [column for column in columns if column.has_content()]
 
     def compose(self) -> Image.Image:
-        menu = OneUIMock(*self.compose_columns(), dark=self.__dark)
+        menu = OneUIMock(*self.compose_columns(), dark=self.dark)
         return menu.render()
 
     async def async_compose(self) -> Image.Image:
@@ -224,21 +222,123 @@ class HelpMenu:
         for element in elements:
             element_hash = hash(element)
             if bool(
-                list(filter(lambda x: hash(x) == element_hash, cls.__registered_boxes))
+                list(filter(lambda x: hash(x) == element_hash, cls.registered_boxes))
             ):
                 continue
-            cls.__registered_boxes.add(element)
+            cls.registered_boxes.add(element)
 
     @classmethod
     def unregister_all(cls):
-        cls.__registered_boxes.clear()
+        cls.registered_boxes.clear()
 
 
-HelpMenu.register_box(
-    HintBox(
-        "本项目开源于以下 Github 仓库",
-        "项目本体 ProjectNu11/Project-Null",
-        "插件仓库 ProjectNu11/PN-Plugins",
-        "中心服务 ProjectNu11/PN-Hub",
-    ),
-)
+class Disclaimer:
+    disclaimer: set[GeneralBox] = set()
+    rendered: bytes | None = None
+    hash: int | None = None
+
+    @classmethod
+    def register(cls, module: Module | str, *disclaimers: str, box: GeneralBox = None):
+        """
+        Register a disclaimer for a module, will override the previous one.
+
+        :param module: The module to register the disclaimer for.
+        :param disclaimers: The disclaimers to register.
+        :param box: The box to register.
+        :return: None
+        """
+
+        if isinstance(box, GeneralBox):
+            cls.disclaimer.add(box)
+            return
+
+        disclaimer = "\n".join([disc for disc in disclaimers if isinstance(disc, str)])
+        if not disclaimer:
+            raise ValueError("disclaimer cannot be empty")
+        cls.unregister(module)
+        if isinstance(module, Module):
+            module = module.name
+        cls.disclaimer.add(
+            GeneralBox(
+                text=module,
+                description=disclaimer,
+            )
+        )
+
+    @classmethod
+    def unregister(cls, module: Module | str):
+        """
+        Unregister a disclaimer for a module.
+
+        :param module: The module to unregister the disclaimer for.
+        :return: None
+        """
+
+        if isinstance(module, Module):
+            module = module.name
+        for box in cls.disclaimer:
+            if module in box.text:
+                cls.disclaimer.remove(box)
+
+    @classmethod
+    def render(
+        cls,
+        avatar: Image.Image | None = None,
+        dark: bool | None = None,
+        jpeg: bool = True,
+    ) -> bytes:
+        """
+        Render the disclaimer.
+
+        :param avatar: The avatar to render.
+        :param dark: Whether to render in dark mode.
+        :param jpeg: Whether to render in jpeg format.
+        :return: The rendered disclaimer.
+        """
+
+        if (current_hash := cls.get_hash()) == cls.hash and cls.rendered:
+            return cls.rendered
+
+        if dark is None:
+            dark = is_dark()
+
+        elements: list[Element] = list(cls.disclaimer)
+        elements.sort(
+            key=lambda box: len("".join([line for line in box.description if line])),
+            reverse=True,
+        )
+
+        columns = [
+            Column(dark=dark) for _ in range(math.floor(math.sqrt(len(elements))))
+        ]
+
+        columns[0].add(Banner(text="免责声明", dark=True))
+
+        if avatar:
+            columns[0].add(
+                Header(
+                    text=f"{config.name}#{config.num}",
+                    description=config.description,
+                    icon=avatar,
+                    dark=dark,
+                )
+            )
+
+        for element in elements:
+            min(columns, key=lambda column: len(column)).add(element, dark=dark)
+
+        rendered = OneUIMock(*columns, dark=dark).render_bytes(jpeg=jpeg)
+        cls.rendered = rendered
+        cls.hash = current_hash
+
+        return rendered
+
+    @classmethod
+    def get_hash(cls) -> int:
+        """
+        Get the hash of the disclaimers registered.
+
+        :return: The hash of the disclaimer.
+        """
+
+        return hash("".join([str(hash(box)) for box in cls.disclaimer]))
