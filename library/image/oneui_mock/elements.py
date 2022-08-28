@@ -915,11 +915,10 @@ class GeneralBoxItem(Element):
         if self.description:
             description = TextUtil.render_text(
                 self.description,
-                self.HIGHLIGHT_COLOR or self.DESCRIPTION_COLOR,
+                self.HIGHLIGHT_COLOR if self.highlight else self.DESCRIPTION_COLOR,
                 ImageUtil.get_font(self.DESCRIPTION_SIZE),
                 width=text_width,
             )
-
             height += description.height
         if text and description:
             height += GAP
