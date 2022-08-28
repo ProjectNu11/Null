@@ -305,10 +305,6 @@ class Disclaimer:
             dark = is_dark()
 
         elements: list[Element] = list(cls.disclaimer)
-        elements.sort(
-            key=lambda box: len("".join([line for line in box.description if line])),
-            reverse=True,
-        )
 
         columns = [
             Column(dark=dark) for _ in range(math.floor(math.sqrt(len(elements))))
