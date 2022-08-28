@@ -82,7 +82,7 @@ class TextUtil:
         image = Image.new("RGBA", (1, 1), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
         bbox = draw.textbbox((0, 0), "\n".join([p[0] for p in pieces]), font=font)
-        height = bbox[3] - bbox[1]
+        height = sum(p[2] for p in pieces)
         image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
         draw = ImageDraw.Draw(image)
         y = -bbox[1]

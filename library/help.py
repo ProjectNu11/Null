@@ -19,6 +19,7 @@ from library.image.oneui_mock.elements import (
     GeneralBox,
     Element,
     is_dark,
+    ImageBox,
 )
 from library.model import Module
 from library.util.switch import switch
@@ -182,7 +183,7 @@ class HelpMenu:
                 or file.name.endswith(".jpg")
                 or file.name.endswith(".jpeg")
             ):
-                elements.append(Image.open(file))
+                elements.append(ImageBox(Image.open(file)))
         return elements
 
     def compose_columns(self) -> list[Column]:
@@ -277,8 +278,9 @@ class Disclaimer:
         if isinstance(module, Module):
             module = module.name
         for box in cls.disclaimer:
-            if module in box.text:
-                cls.disclaimer.remove(box)
+            for item in box.items:
+                if module in item.text:
+                    cls.disclaimer.remove(box)
 
     @classmethod
     def render(
