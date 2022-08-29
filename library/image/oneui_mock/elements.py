@@ -770,6 +770,7 @@ class MenuBox(Box):
             return
         items = [item.render() for item in self.items]
         height = sum(item.height for item in items)
+
         name = None
         if self.name:
             name = TextUtil.render_text(
@@ -778,8 +779,8 @@ class MenuBox(Box):
                 ImageUtil.get_font(self.NAME_SIZE),
                 width=self.width - BOARDER * 2,
             )
-
             height += name.height + GAP
+
         canvas = Image.new("RGBA", (self.width, height), self.FOREGROUND_COLOR)
         _h = 0
         lines = []
@@ -893,9 +894,9 @@ class GeneralBoxItem(Element):
         text = None
         description = None
         if isinstance(self.switch, bool):
-            switch = SWITCH_ICON_ON if switch else SWITCH_ICON_OFF
+            switch = SWITCH_ICON_ON if self.switch else SWITCH_ICON_OFF
             switch = IconUtil.replace_color(
-                switch, self.SWITCH_ENABLED if switch else self.SWITCH_DISABLED
+                switch, self.SWITCH_ENABLED if self.switch else self.SWITCH_DISABLED
             )
 
             switch_width = switch.width * self.SWITCH_HEIGHT // switch.height
@@ -910,7 +911,6 @@ class GeneralBoxItem(Element):
                 ImageUtil.get_font(self.TEXT_SIZE),
                 width=text_width,
             )
-
             height += text.height
         if self.description:
             description = TextUtil.render_text(
@@ -1084,6 +1084,7 @@ class GeneralBox(Box):
             return
         items = [item.render() for item in self.items]
         height = sum(item.height for item in items)
+
         name = None
         if self.name:
             name = TextUtil.render_text(
@@ -1092,8 +1093,8 @@ class GeneralBox(Box):
                 ImageUtil.get_font(self.NAME_SIZE),
                 width=self.width - BOARDER * 2,
             )
-
             height += name.height + GAP
+
         canvas = Image.new("RGBA", (self.width, height), self.FOREGROUND_COLOR)
         _h = 0
         lines = []
@@ -1282,6 +1283,7 @@ class ImageBox(Box):
             self.set_dark()
         else:
             self.set_light()
+
         self.MAX_HEIGHT_PER_COLLAGE = max_height or width
         self.width = width
         self.single_bypass = single_bypass
@@ -1597,7 +1599,7 @@ class Column(Box):
 
         height = sum(element.height for element in rendered) + BOARDER * (len(rendered))
 
-        _height = 0
+        _height = BOARDER
         canvas = Image.new("RGBA", (width, height), self.BACKGROUND_COLOR)
         for element in rendered:
             if element.mode == "RGBA":
