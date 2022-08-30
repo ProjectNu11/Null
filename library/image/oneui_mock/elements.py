@@ -1032,6 +1032,7 @@ class GeneralBox(Box):
     def set_dark(self) -> "GeneralBox":
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
+        self.NAME_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.LINE_COLOR = Color.LINE_COLOR_DARK
         for item in self.items:
             item.set_dark()
@@ -1040,6 +1041,7 @@ class GeneralBox(Box):
     def set_light(self) -> "GeneralBox":
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
+        self.NAME_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.LINE_COLOR = Color.LINE_COLOR_LIGHT
         for item in self.items:
             item.set_light()
