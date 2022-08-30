@@ -1,5 +1,7 @@
 import asyncio
+from pathlib import Path
 
+from PIL import Image as PillowImage
 from graia.ariadne import Ariadne
 from graia.ariadne.event.lifecycle import ApplicationLaunched
 from graia.ariadne.event.message import GroupMessage
@@ -26,6 +28,7 @@ from library.image.oneui_mock.elements import (
 from library.util.blacklist.bot import bot_list, Bot
 
 channel = Channel.current()
+ICON = PillowImage.open(Path(__file__).parent / "icon.png")
 
 
 @channel.use(
@@ -66,7 +69,7 @@ async def botlist_check(app: Ariadne, event: GroupMessage):
 def generate_bot_summary(group: Group, *bots: Bot) -> bytes:
     columns = [
         Column(
-            Banner("机器人名单"),
+            Banner("机器人名单", icon=ICON),
             GeneralBox(group.name, str(group.id)).add(
                 f"一共有 {len(bots)} 个机器人", "仅包含已注册的机器人"
             ),

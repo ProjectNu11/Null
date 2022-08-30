@@ -115,19 +115,23 @@ class Banner(Element):
     width: int
     text: str
     icon: Image.Image | None
+    replace_color: bool
 
     def __init__(
         self,
         text: str,
         icon: Image.Image | None = None,
+        *,
         width: int = DEFAULT_WIDTH,
         dark: bool = None,
+        replace_color: bool = True,
     ):
         """
         :param text: Text to display
         :param icon: Icon to display
         :param width: Width of the banner
         :param dark: Whether the banner is dark or light
+        :param replace_color: Whether replace the color of the icon
         """
 
         if dark is None:
@@ -139,6 +143,7 @@ class Banner(Element):
         self.width = width
         self.text = text
         self.icon = icon
+        self.replace_color = replace_color
 
     def set_dark(self) -> "Banner":
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
@@ -178,6 +183,8 @@ class Banner(Element):
             icon = self.icon.resize(
                 (self.ICON_SIZE, self.ICON_SIZE), Resampling.LANCZOS
             )
+            if self.replace_color:
+                icon = IconUtil.replace_color(icon, self.TEXT_COLOR)
             icon_x = self.width - self.ICON_RIGHT_GAP - self.ICON_SIZE
             icon_y = self.TEXT_Y + (text.height - self.ICON_SIZE) // 2
             if icon.mode == "RGBA":
@@ -635,6 +642,7 @@ class MenuBox(Box):
 
     NAME_COLOR: tuple[int, int, int]
     FOREGROUND_COLOR: tuple[int, int, int]
+    BACKGROUND_COLOR: tuple[int, int, int]
     LINE_COLOR: tuple[int, int, int]
 
     width: int
@@ -688,6 +696,7 @@ class MenuBox(Box):
     def set_dark(self) -> "MenuBox":
         self.NAME_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         self.LINE_COLOR = Color.LINE_COLOR_DARK
         for item in self.items:
             item.set_dark()
@@ -696,6 +705,7 @@ class MenuBox(Box):
     def set_light(self) -> "MenuBox":
         self.NAME_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         self.LINE_COLOR = Color.LINE_COLOR_LIGHT
         for item in self.items:
             item.set_light()
@@ -772,6 +782,7 @@ class MenuBox(Box):
         height = sum(item.height for item in items)
 
         name = None
+        base = None
         if self.name:
             name = TextUtil.render_text(
                 self.name,
@@ -779,14 +790,13 @@ class MenuBox(Box):
                 ImageUtil.get_font(self.NAME_SIZE),
                 width=self.width - BOARDER * 2,
             )
-            height += name.height + GAP
+            base = Image.new(
+                "RGBA", (self.width, height + name.height + GAP), self.BACKGROUND_COLOR
+            )
 
         canvas = Image.new("RGBA", (self.width, height), self.FOREGROUND_COLOR)
         _h = 0
         lines = []
-        if name:
-            canvas.paste(name, (BOARDER, 0), mask=name)
-            _h += name.height + GAP
         for item in items:
             canvas.paste(item, ((canvas.width - item.width) // 2, _h), mask=item)
             _h += item.height
@@ -802,7 +812,12 @@ class MenuBox(Box):
                 width=1,
             )
 
-        return ImageUtil.round_corners(canvas, radius=BOARDER)
+        canvas = ImageUtil.round_corners(canvas, radius=BOARDER)
+        if not name:
+            return canvas
+        base.paste(name, (BOARDER, 0), mask=name)
+        base.paste(canvas, (0, name.height + GAP), mask=canvas)
+        return base
 
     def render_bytes(self, jpeg: bool = True) -> bytes | None:
         if (canvas := self.render()) is None:
@@ -964,6 +979,7 @@ class GeneralBox(Box):
 
     NAME_COLOR: tuple[int, int, int]
     FOREGROUND_COLOR: tuple[int, int, int]
+    BACKGROUND_COLOR: tuple[int, int, int]
     LINE_COLOR: tuple[int, int, int]
 
     NAME_SIZE: int = 30
@@ -1001,7 +1017,7 @@ class GeneralBox(Box):
             self.set_light()
         self.width = width
         self.name = name
-        if text and description:
+        if text or description:
             self.items.append(
                 GeneralBoxItem(
                     text=text,
@@ -1015,6 +1031,7 @@ class GeneralBox(Box):
 
     def set_dark(self) -> "GeneralBox":
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         self.LINE_COLOR = Color.LINE_COLOR_DARK
         for item in self.items:
             item.set_dark()
@@ -1022,6 +1039,7 @@ class GeneralBox(Box):
 
     def set_light(self) -> "GeneralBox":
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         self.LINE_COLOR = Color.LINE_COLOR_LIGHT
         for item in self.items:
             item.set_light()
@@ -1031,6 +1049,10 @@ class GeneralBox(Box):
         self.width = width
         for item in self.items:
             item.set_width(width)
+        return self
+
+    def set_name(self, name: str | None) -> "GeneralBox":
+        self.name = name
         return self
 
     def __len__(self):
@@ -1086,6 +1108,7 @@ class GeneralBox(Box):
         height = sum(item.height for item in items)
 
         name = None
+        base = None
         if self.name:
             name = TextUtil.render_text(
                 self.name,
@@ -1093,14 +1116,13 @@ class GeneralBox(Box):
                 ImageUtil.get_font(self.NAME_SIZE),
                 width=self.width - BOARDER * 2,
             )
-            height += name.height + GAP
+            base = Image.new(
+                "RGBA", (self.width, height + name.height + GAP), self.BACKGROUND_COLOR
+            )
 
         canvas = Image.new("RGBA", (self.width, height), self.FOREGROUND_COLOR)
         _h = 0
         lines = []
-        if name:
-            canvas.paste(name, (BOARDER, 0), mask=name)
-            _h += name.height + GAP
         for item in items:
             canvas.paste(item, ((canvas.width - item.width) // 2, _h), mask=item)
             _h += item.height
@@ -1116,7 +1138,12 @@ class GeneralBox(Box):
                 width=1,
             )
 
-        return ImageUtil.round_corners(canvas, radius=BOARDER)
+        canvas = ImageUtil.round_corners(canvas, radius=BOARDER)
+        if not name:
+            return canvas
+        base.paste(name, (BOARDER, 0), mask=name)
+        base.paste(canvas, (0, name.height + GAP), mask=canvas)
+        return base
 
     def render_bytes(self, jpeg: bool = True) -> bytes | None:
         if (canvas := self.render()) is None:

@@ -12,7 +12,7 @@ class IconUtil:
     @classmethod
     def get_icon(
         cls,
-        icon: str,
+        icon: str | Path,
         size: tuple = None,
         color: tuple[int, int, int] | None = (63, 63, 63),
     ):
@@ -25,7 +25,11 @@ class IconUtil:
         :return: Image of the icon, may be transparent if icon is not found
         """
 
-        path = Path("library", "assets", "icons", f"{icon}.png")
+        path = (
+            Path("library", "assets", "icons", f"{icon}.png")
+            if isinstance(icon, str)
+            else icon
+        )
         if not path.exists():
             return Image.new("RGBA", size, (0, 0, 0, 0))
         icon = Image.open(str(path))
