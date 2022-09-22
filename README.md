@@ -21,12 +21,12 @@ _Another modular bot_
   * [注意](#注意)
   * [项目结构](#项目结构)
   * [参与贡献](#参与贡献)
+  * [许可证](#许可证)
   * [鸣谢](#鸣谢)
 
 ## 项目特色
 
   * 在线插件仓库
-  * 离线通知
   * 基于 SQLAlchemy 的异步 ORM
 
 ## 开始使用
@@ -95,6 +95,10 @@ Project-Null
   * 提交 [Pull Request](https://github.com/ProjectNu11/PN-Plugins/pulls)
   * 在 [Telegram 群组](https://t.me/ProjectNull) 中与我们交流
   * 在 [QQ 群组](https://jq.qq.com/?_wv=1027&k=uKcFPrMI) 中与我们交流
+
+## 许可证
+
+<! PlaceHolder!>
 
 ## 鸣谢
 
