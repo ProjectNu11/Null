@@ -1,3 +1,5 @@
+import asyncio
+import base64
 import random
 from abc import ABC, abstractmethod
 from base64 import b64decode
@@ -7,7 +9,10 @@ from typing import Literal
 
 from PIL import Image
 from PIL.Image import Resampling
+from graia import ariadne
+from graia.ariadne import Ariadne
 from graia.ariadne.message.element import Image as GraiaImage
+from graiax.playwright import PlaywrightBrowser
 from loguru import logger
 
 from library.image import ImageUtil, TextUtil, IconUtil
@@ -63,6 +68,16 @@ class Element(ABC):
         else:
             canvas.save(output, "PNG")
         return output.getvalue()
+
+    @abstractmethod
+    def generate_html(self) -> str:
+        """
+        Generate HTML code.
+
+        :return: str
+        """
+
+        pass
 
     @abstractmethod
     def set_dark(self):
@@ -165,6 +180,12 @@ class Banner(Element):
     def __hash__(self):
         return hash(self.text + str(hash(self.icon)))
 
+    def render_icon(self) -> Image.Image:
+        icon = self.icon.resize((self.ICON_SIZE, self.ICON_SIZE), Resampling.LANCZOS)
+        if self.replace_color:
+            icon = IconUtil.replace_color(icon, self.TEXT_COLOR)
+        return icon
+
     def render(self) -> Image.Image:
         text_width = self.width - 2 * BOARDER
         if self.icon:
@@ -180,11 +201,7 @@ class Banner(Element):
         canvas = Image.new("RGBA", (self.width, height), self.BACKGROUND_COLOR)
 
         if self.icon is not None:
-            icon = self.icon.resize(
-                (self.ICON_SIZE, self.ICON_SIZE), Resampling.LANCZOS
-            )
-            if self.replace_color:
-                icon = IconUtil.replace_color(icon, self.TEXT_COLOR)
+            icon = self.render_icon()
             icon_x = self.width - self.ICON_RIGHT_GAP - self.ICON_SIZE
             icon_y = self.TEXT_Y + (text.height - self.ICON_SIZE) // 2
             if icon.mode == "RGBA":
@@ -208,6 +225,50 @@ class Banner(Element):
         else:
             canvas.save(output, "PNG")
         return output.getvalue()
+
+    def _generate_icon_html(self) -> str:
+        if not self.icon:
+            return ""
+        icon = self.render_icon()
+        icon_bytes = BytesIO()
+        icon.save(icon_bytes, "PNG")
+        icon_base64 = base64.b64encode(icon_bytes.getvalue()).decode("utf-8")
+        return (
+            "<div><img "
+            f'src="data:image/png;base64,{icon_base64}" '
+            f'alt="{self.text}" '
+            f'style="padding-right: {self.ICON_RIGHT_GAP}px; padding-top: {self.TEXT_Y}px"'
+            "/></div>"
+        )
+
+    def _generate_text_html(self) -> str:
+        return (
+            f"<div "
+            f'style="padding-left: {self.TEXT_X}px; '
+            f"padding-top: {self.TEXT_Y}px; "
+            f"padding-right: {BOARDER}px; "
+            f"text-align: left; "
+            f'font-size: {self.TEXT_SIZE}px"'
+            f">{self.text}"
+            "</div>"
+        )
+
+    def generate_html(self) -> str:
+        icon = self._generate_icon_html()
+        text = self._generate_text_html()
+        return (
+            "<div "
+            f'style="color: rgb{self.TEXT_COLOR}; '
+            f"background-color: rgb{self.BACKGROUND_COLOR}; "
+            f"width: {self.width}px; "
+            f"padding-top: {GAP}px; "
+            f"padding-bottom: {GAP}px; "
+            f"display: flex; "
+            f"align-items: center; "
+            f'justify-content: space-between">'
+            f"{text}{icon}"
+            "</div>"
+        )
 
 
 class Header(Element):
@@ -344,6 +405,52 @@ class Header(Element):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def _generate_icon_html(self) -> str:
+        if self.icon is None:
+            return ""
+        icon_bytes = BytesIO()
+        self.icon.save(icon_bytes, "PNG")
+        icon_base64 = base64.b64encode(icon_bytes.getvalue()).decode("utf-8")
+        return (
+            "<div><img "
+            f"width={self.ICON_SIZE}px "
+            f"height={self.ICON_SIZE}px "
+            f'src="data:image/png;base64,{icon_base64}" '
+            f'alt="{self.text}" '
+            f'style="border-radius: 50%"'
+            "/></div>"
+        )
+
+    def _generate_text_html(self) -> str:
+        return (
+            f'<div style="padding-right: {BOARDER}px">'
+            f'<div style="font-size: {self.TEXT_SIZE}px; '
+            f"font-weight: bold; "
+            f"color: rgb{self.TEXT_COLOR}; "
+            f'padding-bottom: {GAP}px">'
+            f"{self.text}</div>"
+            f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
+            f'color: rgb{self.DESCRIPTION_COLOR}">'
+            f"{self.description}</div></div>"
+        )
+
+    def generate_html(self) -> str:
+        icon = self._generate_icon_html()
+        text = self._generate_text_html()
+        return (
+            f'<div style="'
+            f"padding-top: {GAP}px; "
+            f'padding-bottom: {GAP}px">'
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"border-radius: {BOARDER}px; "
+            f"background-color: rgb{self.FOREGROUND_COLOR}; "
+            f"display: flex; "
+            f"align-items: center; "
+            f"padding: {BOARDER}px; "
+            f'justify-content: space-between">'
+            f"{text}{icon}</div></div>"
+        )
+
 
 class ProgressBar(Element):
     """
@@ -471,6 +578,61 @@ class ProgressBar(Element):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def _generate_text_html(self) -> str:
+        return (
+            f'<div style="width: {self.width}px; '
+            f"padding-left: {BOARDER}px; "
+            f"padding-right: {BOARDER}px; "
+            f"padding-bottom: {GAP}px; "
+            f"font-size: {self.TEXT_SIZE}px; "
+            f'color: rgb{self.TEXT_COLOR}">'
+            f"{self.text}</div>"
+            if self.text
+            else ""
+        )
+
+    def _generate_description_html(self) -> str:
+        return (
+            f'<div style="width: {self.width}px; '
+            f"padding-left: {BOARDER}px; "
+            f"padding-right: {BOARDER}px; "
+            f"padding-top: {GAP}px; "
+            f"font-size: {self.DESCRIPTION_SIZE}px; "
+            f'color: rgb{self.DESCRIPTION_COLOR}">'
+            f"{self.description}</div>"
+            if self.description
+            else ""
+        )
+
+    def _generate_progress_bar_html(self) -> str:
+        return (
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"height: {BOARDER}px; "
+            f"border-radius: {BOARDER}px; "
+            f"background-color: rgb{self.SECONDARY_HIGHLIGHT_COLOR}; "
+            f'overflow: hidden">'
+            f'<div style="width: {self.percentage}%; '
+            f"height: 100%; "
+            f"background-color: rgb{self.HIGHLIGHT_COLOR}; "
+            f'"></div></div>'
+        )
+
+    def generate_html(self) -> str:
+        progress_bar = self._generate_progress_bar_html()
+        text = self._generate_text_html()
+        description = self._generate_description_html()
+        return (
+            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
+            f'<div style="width: {self.width}px; '
+            f'padding-top: {BOARDER}px; padding-bottom: {BOARDER}px">'
+            f"{text}"
+            f'<div style="width: {self.width}px; '
+            f"padding-left: {BOARDER}px; padding-right: {BOARDER}px; "
+            f'">{progress_bar}</div>'
+            f"{description}"
+            f"</div></div>"
+        )
+
 
 class Box(Element):
     @abstractmethod
@@ -495,6 +657,7 @@ class Box(Element):
 
 
 class MenuBoxItem(Element):
+
     TEXT_COLOR: tuple[int, int, int]
     DESCRIPTION_COLOR: tuple[int, int, int]
     FOREGROUND_COLOR: tuple[int, int, int]
@@ -630,6 +793,79 @@ class MenuBoxItem(Element):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def _generate_icon_html(self) -> str:
+        if self.icon is None:
+            return ""
+        color = self.icon_color
+        if isinstance(color, bool):
+            palette = random.choice(PALETTE)
+            _ = palette.replace("#", "")
+            color = (int(_[:2], 16), int(_[2:4], 16), int(_[4:6], 16))
+        elif color is None:
+            size = ICON_BASE.size[0] // 4 * 3, ICON_BASE.size[1] // 4 * 3
+            icon = self.icon.resize(size, Resampling.LANCZOS)
+            icon_bytes = BytesIO()
+            icon.save(icon_bytes, "PNG")
+            return (
+                f'<img src="data:image/png;base64,'
+                f'{base64.b64encode(icon_bytes.getvalue()).decode()}" '
+                f'style="width: {self.ICON_SIZE}px; height: {self.ICON_SIZE}px">'
+            )
+        icon = IconUtil.replace_color(self.icon, (252, 252, 252))
+        base = IconUtil.replace_color(ICON_BASE, color)
+        size = base.size[0] // 3 * 2, base.size[1] // 3 * 2
+        icon = icon.resize(size, Resampling.LANCZOS)
+        icon = ImageUtil.paste_to_center(base, icon)
+        icon_bytes = BytesIO()
+        icon.save(icon_bytes, "PNG")
+        return (
+            f'<img src="data:image/png;base64,'
+            f'{base64.b64encode(icon_bytes.getvalue()).decode()}" '
+            f'style="width: {self.ICON_SIZE}px; height: {self.ICON_SIZE}px">'
+        )
+
+    def _generate_title_html(self) -> str:
+        if self.text is None:
+            return ""
+        return (
+            f'<div style="font-size: {self.TEXT_SIZE}px; '
+            f"color: rgb{self.TEXT_COLOR}; "
+            f"width: {self.width - self.ICON_SIZE - BOARDER * 3}px; "
+            f"overflow: hidden; "
+            f"text-overflow: ellipsis; "
+            f"white-space: nowrap; "
+            f'">{self.text}</div>'
+        )
+
+    def _generate_description_html(self) -> str:
+        if self.description is None:
+            return ""
+        return (
+            f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
+            f"color: rgb{self.DESCRIPTION_COLOR}; "
+            f"margin-top: {GAP}px; "
+            f"width: {self.width - self.ICON_SIZE - BOARDER * 3}px; "
+            f"overflow: hidden; "
+            f"text-overflow: ellipsis; "
+            f"white-space: nowrap; "
+            f'">{self.description}</div>'
+        )
+
+    def generate_html(self) -> str:
+        icon = self._generate_icon_html()
+        title = self._generate_title_html()
+        description = self._generate_description_html()
+        return (
+            f'<div style="width: {self.width}px; '
+            f"background-color: rgb{self.FOREGROUND_COLOR}; "
+            f"display: flex; "
+            f"align-items: center; "
+            f"border-radius: {BOARDER}px; "
+            f'"><div style="'
+            f"padding: {BOARDER}px; "
+            f'">{icon}</div><div>{title}{description}</div></div>'
+        )
+
 
 class MenuBox(Box):
     """
@@ -638,7 +874,7 @@ class MenuBox(Box):
     Each text should be in one line for better display.
     """
 
-    NAME_SIZE: int = 30
+    NAME_SIZE: int = 25
 
     NAME_COLOR: tuple[int, int, int]
     FOREGROUND_COLOR: tuple[int, int, int]
@@ -829,8 +1065,44 @@ class MenuBox(Box):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def _generate_name_html(self) -> str:
+        return (
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"color: rgb{self.NAME_COLOR}; "
+            f"padding-left: {BOARDER}px; "
+            f"overflow: hidden; "
+            f"text-overflow: ellipsis; "
+            f"white-space: nowrap; "
+            f'font-size: {self.NAME_SIZE}px">'
+            f"{self.name}</div>"
+            if self.name
+            else ""
+        )
+
+    def generate_html(self) -> str:
+        if not self.has_content():
+            return ""
+        name = self._generate_name_html()
+        items = [item.generate_html() for item in self.items]
+        divider = (
+            f'<div style="height: 3px; '
+            f"background-color: rgb{self.LINE_COLOR}; "
+            f"margin-left: {BOARDER * 3 + GAP * 3}px; "
+            f'margin-right: {BOARDER}px;"></div>'
+        )
+        for i in range(len(items) - 1):
+            items[i] += divider
+        return (
+            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
+            f'{name}<div style="width: {self.width}px; '
+            f"background-color: rgb{self.FOREGROUND_COLOR}; "
+            f'border-radius: {BOARDER}px">'
+            f'{"".join(items)}</div></div>'
+        )
+
 
 class GeneralBoxItem(Element):
+
     TEXT_COLOR: tuple[int, int, int]
     DESCRIPTION_COLOR: tuple[int, int, int]
     FOREGROUND_COLOR: tuple[int, int, int]
@@ -969,6 +1241,63 @@ class GeneralBoxItem(Element):
         else:
             canvas.save(output, "PNG")
         return output.getvalue()
+
+    def _generate_switch_html(self) -> str:
+        if self.switch is None:
+            return ""
+        switch = SWITCH_ICON_ON if self.switch else SWITCH_ICON_OFF
+        switch = IconUtil.replace_color(
+            switch, self.SWITCH_ENABLED if self.switch else self.SWITCH_DISABLED
+        )
+        switch_width = switch.width * self.SWITCH_HEIGHT // switch.height
+        switch = switch.resize((switch_width, self.SWITCH_HEIGHT))
+        switch_bytes = BytesIO()
+        switch.save(switch_bytes, "PNG")
+        return (
+            f'<div style="'
+            f"border-radius: {self.SWITCH_HEIGHT // 2}px; "
+            f'margin-left: {BOARDER}px">'
+            f'<img src="data:image/png;base64,'
+            f'{base64.b64encode(switch_bytes.getvalue()).decode()}" />'
+            f"</div>"
+        )
+
+    def _generate_text_html(self) -> str:
+        return (
+            f'<div style="font-size: {self.TEXT_SIZE}px; '
+            f'color: rgb{self.TEXT_COLOR}">{self.text}</div>'
+            if self.text
+            else ""
+        )
+
+    def _generate_description_html(self) -> str:
+        return (
+            f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
+            f"padding-top: {GAP}px; color: rgb"
+            f"{self.HIGHLIGHT_COLOR if self.highlight else self.DESCRIPTION_COLOR}"
+            f'">{self.description}</div>'
+            if self.description
+            else ""
+        )
+
+    def generate_html(self) -> str:
+        switch = self._generate_switch_html()
+        text = self._generate_text_html()
+        description = self._generate_description_html()
+        if text or description:
+            return (
+                f'<div style="width: {self.width}px; '
+                f"background-color: rgb{self.FOREGROUND_COLOR}; "
+                f"display: flex; "
+                f"align-items: center; "
+                f'border-radius: {BOARDER}px">'
+                f'<div style="display: flex; '
+                f"justify-content: space-between; align-items: center; "
+                f'width: {self.width}px; padding: {BOARDER}px">'
+                f"<div>{text}{description}</div>{switch}</div></div>"
+            )
+        else:
+            return ""
 
 
 class GeneralBox(Box):
@@ -1157,6 +1486,41 @@ class GeneralBox(Box):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def _generate_name_html(self) -> str:
+        return (
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"color: rgb{self.NAME_COLOR}; "
+            f"padding-left: {BOARDER}px; "
+            f"overflow: hidden; "
+            f"text-overflow: ellipsis; "
+            f"white-space: nowrap; "
+            f'font-size: {self.NAME_SIZE}px">'
+            f"{self.name}</div>"
+            if self.name
+            else ""
+        )
+
+    def generate_html(self) -> str:
+        if not self.has_content():
+            return ""
+        name = self._generate_name_html()
+        items = [item.generate_html() for item in self.items]
+        divider = (
+            f'<div style="height: 3px; '
+            f"background-color: rgb{self.LINE_COLOR}; "
+            f"margin-left: {BOARDER}px; "
+            f'margin-right: {BOARDER}px;"></div>'
+        )
+        for i in range(len(items) - 1):
+            items[i] += divider
+        return (
+            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
+            f'{name}<div style="width: {self.width}px; '
+            f"background-color: rgb{self.FOREGROUND_COLOR}; "
+            f'border-radius: {BOARDER}px">'
+            f'{"".join(items)}</div></div>'
+        )
+
 
 class HintBox(Box):
     """
@@ -1281,8 +1645,43 @@ class HintBox(Box):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def _generate_title_html(self) -> str:
+        return (
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"color: rgb{self.TEXT_COLOR}; "
+            f"padding-bottom: {GAP}px; "
+            f'font-size: {self.TITLE_SIZE}px">'
+            f"{self.title}</div>"
+            if self.title
+            else ""
+        )
+
+    def _generate_hint_html(self, hint: str) -> str:
+        return (
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"color: rgb{self.HIGHLIGHT_COLOR}; "
+            f"padding-top: {GAP}px; "
+            f'font-size: {self.TEXT_SIZE}px">'
+            f"{hint}</div>"
+        )
+
+    def generate_html(self) -> str:
+        if not self.has_content():
+            return ""
+        title = self._generate_title_html()
+        hints = [self._generate_hint_html(hint) for hint in self.hints]
+        return (
+            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"padding: {BOARDER}px; "
+            f"background-color: rgb{self.FOREGROUND_COLOR}; "
+            f'border-radius: {BOARDER}px">'
+            f'{title}{"".join(hints)}</div></div>'
+        )
+
 
 class ImageBox(Box):
+
     width: int
     MAX_HEIGHT_PER_COLLAGE: int
     single_bypass: bool
@@ -1528,6 +1927,25 @@ class ImageBox(Box):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def generate_html(self) -> str:
+        if not (images := self.extract()):
+            return ""
+        image = images[0]
+        image_bytes = BytesIO()
+        image.save(image_bytes, "JPEG" if image.mode == "RGB" else "PNG")
+        image_bytes = image_bytes.getvalue()
+        return (
+            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
+            f'<div style="width: {self.width}px; '
+            f'border-radius: {BOARDER}px">'
+            f'<img src="data:image/jpeg;base64,'
+            f'{base64.b64encode(image_bytes).decode()}" '
+            f'width="{self.width}" '
+            f'height="{image.height * self.width // image.width}" '
+            f'style="border-radius: {BOARDER}px" />'
+            f"</div></div>"
+        )
+
 
 class Column(Box):
     """
@@ -1553,19 +1971,17 @@ class Column(Box):
         :param dark: Whether the column is dark.
         """
 
+        self.parts = []
+        self.width = width
+        self.length = 0
+        for element in args:
+            self.add(element)
         if dark is None:
             dark = is_dark()
         if dark:
-            self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
-            self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
+            self.set_dark()
         else:
-            self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
-            self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
-        self.length = 0
-        self.width = width
-        self.parts = []
-        for element in args:
-            self.add(element)
+            self.set_light()
 
     def __len__(self):
         return self.length
@@ -1579,11 +1995,15 @@ class Column(Box):
     def set_dark(self) -> "Column":
         for element in self.parts:
             element.set_dark()
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
+        self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         return self
 
     def set_light(self) -> "Column":
         for element in self.parts:
             element.set_light()
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
+        self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         return self
 
     def set_width(self, width: int) -> "Column":
@@ -1652,6 +2072,18 @@ class Column(Box):
             canvas.save(output, "PNG")
         return output.getvalue()
 
+    def generate_html(self) -> str:
+        return (
+            f'<div style="width: {self.width}px; '
+            f"padding-top: {GAP}px; "
+            f"padding-bottom: {GAP}px; "
+            f'background-color: rgb{self.BACKGROUND_COLOR}">'
+            f"{''.join([part.generate_html() for part in self.parts])}"
+            "</div>"
+            if self.parts
+            else ""
+        )
+
 
 class OneUIMock:
     """
@@ -1663,7 +2095,6 @@ class OneUIMock:
     GRID_SIZE: int = 36
 
     parts: list[Column]
-    dark: bool
 
     def __init__(self, *args: Column, dark: bool = None):
         """
@@ -1671,16 +2102,16 @@ class OneUIMock:
         :param dark: Whether the mockery is dark.
         """
 
+        self.parts = []
+        for element in args:
+            self.add(element)
         if dark is None:
             dark = is_dark()
         self.dark = dark
         if dark:
-            self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
+            self.set_dark()
         else:
-            self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
-        self.parts = []
-        for element in args:
-            self.add(element)
+            self.set_light()
 
     def add(self, *elements: Element) -> "OneUIMock":
         """
@@ -1702,16 +2133,20 @@ class OneUIMock:
                 self.parts.append(element)
         return self
 
+    dark: bool
+
     def set_dark(self) -> "OneUIMock":
         for element in self.parts:
             element.set_dark()
         self.dark = True
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         return self
 
     def set_light(self) -> "OneUIMock":
         for element in self.parts:
             element.set_light()
         self.dark = False
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         return self
 
     def set_width(self, width: int) -> "OneUIMock":
@@ -1757,6 +2192,56 @@ class OneUIMock:
         else:
             canvas.save(output, "PNG")
         return output.getvalue()
+
+    def generate_html(self) -> str:
+        if not self.parts:
+            return ""
+        columns = [part.generate_html() for part in self.parts]
+        width = sum(part.width for part in self.parts)
+        style = (
+            "<style>"
+            "*{margin: 0; "
+            "padding: 0;"
+            "font-family: Helvetica, Arial, sans-serif}"
+            "</style>"
+        )
+        if len(columns) == 1:
+            return f"<html><head>{style}</head><body>" f"{columns[0]}</body></html>"
+        modified = []
+        for column in columns:
+            column = f'<div style="padding-left: {self.GRID_SIZE}px">{column}</div>'
+            modified.append(column)
+        width += self.GRID_SIZE * (len(columns) + 1) - self.GRID_SIZE
+        return (
+            f"<html><head>{style}</head><body>"
+            f'<div style="width: {width}px; '
+            f"padding-right: {self.GRID_SIZE}px; "
+            f"display: flex; "
+            f'background-color: rgb{self.BACKGROUND_COLOR}">'
+            f"{''.join(modified)}"
+            "</div></body></html>"
+        )
+
+    async def async_render_bytes(self) -> bytes:
+        browser = Ariadne.current().launch_manager.get_interface(PlaywrightBrowser)
+        html = await asyncio.to_thread(self.generate_html)
+        async with browser.page(
+            viewport={"width": self.width, "height": 1},
+            device_scale_factor=1.5,
+        ) as page:
+            await page.set_content(html)
+            img = await page.screenshot(
+                type="jpeg", quality=80, full_page=True, scale="device"
+            )
+            return img
+
+    @property
+    def width(self) -> int:
+        width = sum(part.width for part in self.parts)
+        if len(self.parts) == 1:
+            return width
+        width += (self.GRID_SIZE // 2) * (len(self.parts) + 1) - self.GRID_SIZE // 2
+        return width
 
 
 def is_dark() -> bool:

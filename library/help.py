@@ -51,7 +51,7 @@ class HelpMenu:
         avatar: Image.Image,
         *,
         banner: str = "帮助菜单",
-        dark: bool = False,
+        dark: bool = is_dark(),
     ) -> None:
         self.banner = Banner(banner, dark=dark)
         self.header = Header(
@@ -218,6 +218,20 @@ class HelpMenu:
     async def async_compose(self) -> Image.Image:
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.compose)
+
+    def get_mock(self) -> OneUIMock:
+        return OneUIMock(*self.compose_columns(), dark=self.dark)
+
+    async def async_get_mock(self) -> OneUIMock:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.get_mock)
+
+    def get_html(self) -> str:
+        return self.get_mock().generate_html()
+
+    async def async_get_html(self) -> str:
+        loop = asyncio.get_event_loop()
+        return await loop.run_in_executor(None, self.get_html)
 
     @classmethod
     def register_box(cls, *elements: Box | Image.Image):

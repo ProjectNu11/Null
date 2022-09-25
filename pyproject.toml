@@ -6,16 +6,19 @@ authors = ["nullqwertyuiop"]
 license = "AGPL-3.0 license"
 
 [tool.poetry.dependencies]
-python = "^3.10"
-graia-ariadne = "^0.9.1"
-graia-saya = "^0.0.16"
-graia-scheduler = "^0.0.8"
-requests = "^2.27.1"
-SQLAlchemy = "^1.4.37"
-aiohttp = "^3.8.1"
-aiomysql = "^0.1.1"
-aiosqlite = "^0.17.0"
-numpy = "^1.23.1"
+python = ">=3.10,<4.0"
+graia-ariadne = ">=0.9.4"
+graia-saya = ">=0.0.16"
+graia-scheduler = ">=0.0.8"
+requests = ">=2.27.1"
+SQLAlchemy = ">=1.4.37"
+aiohttp = ">=3.8.3"
+aiomysql = ">=0.1.1"
+aiosqlite = ">=0.17.0"
+numpy = ">=1.23.3"
+typing-extensions = ">=4.3.0"
+kayaku = ">=0.4.0rc2"
+graiax-playwright = "^0.2.0"
 
 [tool.poetry.dev-dependencies]
 

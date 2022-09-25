@@ -8,6 +8,7 @@ from graia.saya import Saya
 from graia.saya.builtins.broadcast import BroadcastBehaviour
 from graia.scheduler import GraiaScheduler
 from graia.scheduler.saya.behaviour import GraiaSchedulerBehaviour
+from graiax.playwright import PlaywrightService
 
 from library.config import config
 from library.context import scheduler
@@ -26,6 +27,7 @@ saya.install_behaviours(
     ariadne.create(BroadcastBehaviour),
     ariadne.create(GraiaSchedulerBehaviour),
 )
+ariadne.launch_manager.add_service(PlaywrightService("chromium"))
 
 if __name__ == """__main__""":
     from module import modules
