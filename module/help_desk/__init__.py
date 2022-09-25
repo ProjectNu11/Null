@@ -20,6 +20,7 @@ from graia.ariadne.message.parser.twilight import (
 )
 from graia.saya import Channel
 from graia.saya.builtins.broadcast import ListenerSchema
+from graiax.playwright import PlaywrightBrowser
 from loguru import logger
 from pydantic import BaseModel
 
@@ -72,11 +73,26 @@ async def help_menu(app: Ariadne, event: MessageEvent, invalidate: ArgResult):
         )
     await get_avatar(app)
     field = event.sender.group.id if isinstance(event, GroupMessage) else 0
-    menu = await one_ui_help_menu.get(field, app)
+    # menu = await one_ui_help_menu.get(field, app)
+    menu = await get_help(app, field)
     await app.send_message(
         event.sender.group if isinstance(event, GroupMessage) else event.sender,
         MessageChain([Image(data_bytes=menu)]),
     )
+
+
+async def get_help(app: Ariadne, field: int) -> bytes:
+    mock = await HelpMenu(field, avatar_img).async_get_mock()
+    browser = app.launch_manager.get_interface(PlaywrightBrowser)
+    async with browser.page(
+        viewport={"width": mock.width, "height": 10},
+        device_scale_factor=1.5,
+    ) as page:
+        await page.set_content(mock.generate_html())
+        img = await page.screenshot(
+            type="jpeg", quality=80, full_page=True, scale="device"
+        )
+        return img
 
 
 @channel.use(
