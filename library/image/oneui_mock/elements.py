@@ -9,7 +9,6 @@ from typing import Literal
 
 from PIL import Image
 from PIL.Image import Resampling
-from graia import ariadne
 from graia.ariadne import Ariadne
 from graia.ariadne.message.element import Image as GraiaImage
 from graiax.playwright import PlaywrightBrowser
@@ -17,6 +16,7 @@ from loguru import logger
 
 from library.image import ImageUtil, TextUtil, IconUtil
 from .color import Color, PALETTE
+from ...util.http import html_escape
 
 DEFAULT_WIDTH: int = 720
 
@@ -236,7 +236,6 @@ class Banner(Element):
         return (
             "<div><img "
             f'src="data:image/png;base64,{icon_base64}" '
-            f'alt="{self.text}" '
             f'style="padding-right: {self.ICON_RIGHT_GAP}px; padding-top: {self.TEXT_Y}px"'
             "/></div>"
         )
@@ -249,7 +248,7 @@ class Banner(Element):
             f"padding-right: {BOARDER}px; "
             f"text-align: left; "
             f'font-size: {self.TEXT_SIZE}px"'
-            f">{self.text}"
+            f">{html_escape(self.text)}"
             "</div>"
         )
 
@@ -416,7 +415,6 @@ class Header(Element):
             f"width={self.ICON_SIZE}px "
             f"height={self.ICON_SIZE}px "
             f'src="data:image/png;base64,{icon_base64}" '
-            f'alt="{self.text}" '
             f'style="border-radius: 50%"'
             "/></div>"
         )
@@ -428,10 +426,10 @@ class Header(Element):
             f"font-weight: bold; "
             f"color: rgb{self.TEXT_COLOR}; "
             f'padding-bottom: {GAP}px">'
-            f"{self.text}</div>"
+            f"{html_escape(self.text)}</div>"
             f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
             f'color: rgb{self.DESCRIPTION_COLOR}">'
-            f"{self.description}</div></div>"
+            f"{html_escape(self.description)}</div></div>"
         )
 
     def generate_html(self) -> str:
@@ -580,26 +578,26 @@ class ProgressBar(Element):
 
     def _generate_text_html(self) -> str:
         return (
-            f'<div style="width: {self.width}px; '
+            f'<div style="width: {self.width - BOARDER * 2}px; '
             f"padding-left: {BOARDER}px; "
             f"padding-right: {BOARDER}px; "
             f"padding-bottom: {GAP}px; "
             f"font-size: {self.TEXT_SIZE}px; "
             f'color: rgb{self.TEXT_COLOR}">'
-            f"{self.text}</div>"
+            f"{html_escape(self.text)}</div>"
             if self.text
             else ""
         )
 
     def _generate_description_html(self) -> str:
         return (
-            f'<div style="width: {self.width}px; '
+            f'<div style="width: {self.width - BOARDER * 2}px; '
             f"padding-left: {BOARDER}px; "
             f"padding-right: {BOARDER}px; "
             f"padding-top: {GAP}px; "
             f"font-size: {self.DESCRIPTION_SIZE}px; "
             f'color: rgb{self.DESCRIPTION_COLOR}">'
-            f"{self.description}</div>"
+            f"{html_escape(self.description)}</div>"
             if self.description
             else ""
         )
@@ -623,11 +621,11 @@ class ProgressBar(Element):
         description = self._generate_description_html()
         return (
             f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
-            f'<div style="width: {self.width}px; '
+            f'<div style="width: {self.width - BOARDER * 2}px; '
             f'padding-top: {BOARDER}px; padding-bottom: {BOARDER}px">'
             f"{text}"
-            f'<div style="width: {self.width}px; '
-            f"padding-left: {BOARDER}px; padding-right: {BOARDER}px; "
+            f'<div style="width: {self.width - BOARDER * 2}px; '
+            f"padding-left: {BOARDER}px; padding-right: {BOARDER}px"
             f'">{progress_bar}</div>'
             f"{description}"
             f"</div></div>"
@@ -834,7 +832,7 @@ class MenuBoxItem(Element):
             f"overflow: hidden; "
             f"text-overflow: ellipsis; "
             f"white-space: nowrap; "
-            f'">{self.text}</div>'
+            f'">{html_escape(self.text)}</div>'
         )
 
     def _generate_description_html(self) -> str:
@@ -848,7 +846,7 @@ class MenuBoxItem(Element):
             f"overflow: hidden; "
             f"text-overflow: ellipsis; "
             f"white-space: nowrap; "
-            f'">{self.description}</div>'
+            f'">{html_escape(self.description)}</div>'
         )
 
     def generate_html(self) -> str:
@@ -1074,7 +1072,7 @@ class MenuBox(Box):
             f"text-overflow: ellipsis; "
             f"white-space: nowrap; "
             f'font-size: {self.NAME_SIZE}px">'
-            f"{self.name}</div>"
+            f"{html_escape(self.name)}</div>"
             if self.name
             else ""
         )
@@ -1265,7 +1263,7 @@ class GeneralBoxItem(Element):
     def _generate_text_html(self) -> str:
         return (
             f'<div style="font-size: {self.TEXT_SIZE}px; '
-            f'color: rgb{self.TEXT_COLOR}">{self.text}</div>'
+            f'color: rgb{self.TEXT_COLOR}">{html_escape(self.text)}</div>'
             if self.text
             else ""
         )
@@ -1275,7 +1273,7 @@ class GeneralBoxItem(Element):
             f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
             f"padding-top: {GAP}px; color: rgb"
             f"{self.HIGHLIGHT_COLOR if self.highlight else self.DESCRIPTION_COLOR}"
-            f'">{self.description}</div>'
+            f'">{html_escape(self.description)}</div>'
             if self.description
             else ""
         )
@@ -1495,7 +1493,7 @@ class GeneralBox(Box):
             f"text-overflow: ellipsis; "
             f"white-space: nowrap; "
             f'font-size: {self.NAME_SIZE}px">'
-            f"{self.name}</div>"
+            f"{html_escape(self.name)}</div>"
             if self.name
             else ""
         )
@@ -1651,7 +1649,7 @@ class HintBox(Box):
             f"color: rgb{self.TEXT_COLOR}; "
             f"padding-bottom: {GAP}px; "
             f'font-size: {self.TITLE_SIZE}px">'
-            f"{self.title}</div>"
+            f"{html_escape(self.title)}</div>"
             if self.title
             else ""
         )
@@ -1662,7 +1660,7 @@ class HintBox(Box):
             f"color: rgb{self.HIGHLIGHT_COLOR}; "
             f"padding-top: {GAP}px; "
             f'font-size: {self.TEXT_SIZE}px">'
-            f"{hint}</div>"
+            f"{html_escape(hint)}</div>"
         )
 
     def generate_html(self) -> str:
