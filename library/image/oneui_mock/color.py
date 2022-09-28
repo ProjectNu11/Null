@@ -28,6 +28,9 @@ class Color:
     SWITCH_DISABLE_COLOR_LIGHT = (153, 153, 153)
     SWITCH_DISABLE_COLOR_DARK = (101, 102, 96)
 
+    FOOTER_COLOR_LIGHT = (156, 156, 156)
+    FOOTER_COLOR_DARK = (99, 99, 99)
+
     def __setattr__(self, *_):
         raise AttributeError("Looks like you are trying to set a color value.")
 

@@ -7,18 +7,21 @@ from datetime import datetime
 from io import BytesIO
 from typing import Literal
 
+import playwright
 from PIL import Image
 from PIL.Image import Resampling
 from graia.ariadne import Ariadne
 from graia.ariadne.message.element import Image as GraiaImage
 from graiax.playwright import PlaywrightBrowser
 from loguru import logger
+from typing_extensions import Self
 
+from library import __version__, config
 from library.image import ImageUtil, TextUtil, IconUtil
-from .color import Color, PALETTE
-from ...util.http import html_escape
+from library.image.oneui_mock.color import Color, PALETTE
+from library.util.http import html_escape
 
-DEFAULT_WIDTH: int = 720
+DEFAULT_WIDTH: int = 800
 
 ICON_BASE: Image.Image = IconUtil.get_icon("oneui-base", color=(0, 0, 0))
 SWITCH_ICON_ON: Image.Image = IconUtil.get_icon("oneui-switch-on", color=(0, 0, 0))
@@ -160,17 +163,17 @@ class Banner(Element):
         self.icon = icon
         self.replace_color = replace_color
 
-    def set_dark(self) -> "Banner":
+    def set_dark(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         return self
 
-    def set_light(self) -> "Banner":
+    def set_light(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "Banner":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
@@ -233,41 +236,49 @@ class Banner(Element):
         icon_bytes = BytesIO()
         icon.save(icon_bytes, "PNG")
         icon_base64 = base64.b64encode(icon_bytes.getvalue()).decode("utf-8")
-        return (
-            "<div><img "
-            f'src="data:image/png;base64,{icon_base64}" '
-            f'style="padding-right: {self.ICON_RIGHT_GAP}px; padding-top: {self.TEXT_Y}px"'
-            "/></div>"
-        )
+        return f"""
+            <div>
+                <img 
+                    src="data:image/png;base64,{icon_base64}" 
+                    style="
+                        padding-right: {self.ICON_RIGHT_GAP}px; 
+                        padding-top: {self.TEXT_Y}px
+                    "
+                />
+            </div>
+            """
 
     def _generate_text_html(self) -> str:
-        return (
-            f"<div "
-            f'style="padding-left: {self.TEXT_X}px; '
-            f"padding-top: {self.TEXT_Y}px; "
-            f"padding-right: {BOARDER}px; "
-            f"text-align: left; "
-            f'font-size: {self.TEXT_SIZE}px"'
-            f">{html_escape(self.text)}"
-            "</div>"
-        )
+        return f"""
+            <div style="
+                padding-left: {self.TEXT_X}px; 
+                padding-top: {self.TEXT_Y}px; 
+                padding-right: {BOARDER}px; 
+                text-align: left; 
+                font-size: {self.TEXT_SIZE}px
+            ">
+                {html_escape(self.text)}
+            </div>
+            """
 
     def generate_html(self) -> str:
         icon = self._generate_icon_html()
         text = self._generate_text_html()
-        return (
-            "<div "
-            f'style="color: rgb{self.TEXT_COLOR}; '
-            f"background-color: rgb{self.BACKGROUND_COLOR}; "
-            f"width: {self.width}px; "
-            f"padding-top: {GAP}px; "
-            f"padding-bottom: {GAP}px; "
-            f"display: flex; "
-            f"align-items: center; "
-            f'justify-content: space-between">'
-            f"{text}{icon}"
-            "</div>"
-        )
+        return f"""
+            <div style="
+                color: rgb{self.TEXT_COLOR}; 
+                background-color: rgb{self.BACKGROUND_COLOR}; 
+                width: {self.width}px; 
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px; 
+                display: flex; 
+                align-items: center; 
+                justify-content: space-between
+            ">
+                {text}
+                {icon}
+            </div>
+            """
 
 
 class Header(Element):
@@ -317,19 +328,19 @@ class Header(Element):
         self.description = description
         self.icon = icon
 
-    def set_dark(self) -> "Header":
+    def set_dark(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         return self
 
-    def set_light(self) -> "Header":
+    def set_light(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "Header":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
@@ -410,44 +421,58 @@ class Header(Element):
         icon_bytes = BytesIO()
         self.icon.save(icon_bytes, "PNG")
         icon_base64 = base64.b64encode(icon_bytes.getvalue()).decode("utf-8")
-        return (
-            "<div><img "
-            f"width={self.ICON_SIZE}px "
-            f"height={self.ICON_SIZE}px "
-            f'src="data:image/png;base64,{icon_base64}" '
-            f'style="border-radius: 50%"'
-            "/></div>"
-        )
+        return f"""
+            <div>
+                <img 
+                    width={self.ICON_SIZE}px 
+                    height={self.ICON_SIZE}px 
+                    src="data:image/png;base64,{icon_base64}" 
+                    style="border-radius: 50%"
+                />
+            </div>
+            """
 
     def _generate_text_html(self) -> str:
-        return (
-            f'<div style="padding-right: {BOARDER}px">'
-            f'<div style="font-size: {self.TEXT_SIZE}px; '
-            f"font-weight: bold; "
-            f"color: rgb{self.TEXT_COLOR}; "
-            f'padding-bottom: {GAP}px">'
-            f"{html_escape(self.text)}</div>"
-            f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
-            f'color: rgb{self.DESCRIPTION_COLOR}">'
-            f"{html_escape(self.description)}</div></div>"
-        )
+        return f"""
+            <div style="padding-right: {BOARDER}px">
+                <div style="
+                    font-size: {self.TEXT_SIZE}px; 
+                    font-weight: bold; 
+                    color: rgb{self.TEXT_COLOR}; 
+                ">
+                    {html_escape(self.text)}
+                </div>
+                <div style="
+                    font-size: {self.DESCRIPTION_SIZE}px; 
+                    color: rgb{self.DESCRIPTION_COLOR}
+                ">
+                    {html_escape(self.description)}
+                    </div>
+            </div>
+            """
 
     def generate_html(self) -> str:
         icon = self._generate_icon_html()
         text = self._generate_text_html()
-        return (
-            f'<div style="'
-            f"padding-top: {GAP}px; "
-            f'padding-bottom: {GAP}px">'
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"border-radius: {BOARDER}px; "
-            f"background-color: rgb{self.FOREGROUND_COLOR}; "
-            f"display: flex; "
-            f"align-items: center; "
-            f"padding: {BOARDER}px; "
-            f'justify-content: space-between">'
-            f"{text}{icon}</div></div>"
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {GAP}px
+            ">
+                <div style="
+                    width: {self.width - BOARDER * 2}px; 
+                    border-radius: {BOARDER}px; 
+                    background-color: rgb{self.FOREGROUND_COLOR}; 
+                    display: flex; 
+                    align-items: center; 
+                    padding: {BOARDER}px; 
+                    justify-content: space-between
+                ">
+                    {text}
+                    {icon}
+                </div>
+            </div>
+            """
 
 
 class ProgressBar(Element):
@@ -498,7 +523,7 @@ class ProgressBar(Element):
     def __hash__(self):
         return hash(f"ProgressBar{self.width}{self.percentage}")
 
-    def set_dark(self) -> "ProgressBar":
+    def set_dark(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.HIGHLIGHT_COLOR = Color.HIGHLIGHT_COLOR_DARK
@@ -506,7 +531,7 @@ class ProgressBar(Element):
         self.SECONDARY_HIGHLIGHT_COLOR = Color.SECONDARY_HIGHLIGHT_COLOR_DARK
         return self
 
-    def set_light(self) -> "ProgressBar":
+    def set_light(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.HIGHLIGHT_COLOR = Color.HIGHLIGHT_COLOR_LIGHT
@@ -514,7 +539,7 @@ class ProgressBar(Element):
         self.SECONDARY_HIGHLIGHT_COLOR = Color.SECONDARY_HIGHLIGHT_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "ProgressBar":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
@@ -578,58 +603,83 @@ class ProgressBar(Element):
 
     def _generate_text_html(self) -> str:
         return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"padding-left: {BOARDER}px; "
-            f"padding-right: {BOARDER}px; "
-            f"padding-bottom: {GAP}px; "
-            f"font-size: {self.TEXT_SIZE}px; "
-            f'color: rgb{self.TEXT_COLOR}">'
-            f"{html_escape(self.text)}</div>"
+            f"""
+            <div style="
+                width: {self.width - BOARDER * 2}px; 
+                padding-left: {BOARDER}px; 
+                padding-right: {BOARDER}px; 
+                padding-bottom: {GAP}px; 
+                font-size: {self.TEXT_SIZE}px; 
+                color: rgb{self.TEXT_COLOR}
+            ">
+                {html_escape(self.text)}
+            </div>
+            """
             if self.text
             else ""
         )
 
     def _generate_description_html(self) -> str:
         return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"padding-left: {BOARDER}px; "
-            f"padding-right: {BOARDER}px; "
-            f"padding-top: {GAP}px; "
-            f"font-size: {self.DESCRIPTION_SIZE}px; "
-            f'color: rgb{self.DESCRIPTION_COLOR}">'
-            f"{html_escape(self.description)}</div>"
+            f"""
+            <div style="
+                width: {self.width - BOARDER * 2}px; 
+                padding-left: {BOARDER}px; 
+                padding-right: {BOARDER}px; 
+                padding-top: {GAP}px; 
+                font-size: {self.DESCRIPTION_SIZE}px; 
+                color: rgb{self.DESCRIPTION_COLOR}
+            ">
+                {html_escape(self.description)}
+            </div>
+            """
             if self.description
             else ""
         )
 
     def _generate_progress_bar_html(self) -> str:
-        return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"height: {BOARDER}px; "
-            f"border-radius: {BOARDER}px; "
-            f"background-color: rgb{self.SECONDARY_HIGHLIGHT_COLOR}; "
-            f'overflow: hidden">'
-            f'<div style="width: {self.percentage}%; '
-            f"height: 100%; "
-            f"background-color: rgb{self.HIGHLIGHT_COLOR}; "
-            f'"></div></div>'
-        )
+        return f"""
+            <div style="
+                width: {self.width - BOARDER * 2}px; 
+                height: {BOARDER}px; 
+                border-radius: {BOARDER}px; 
+                background-color: rgb{self.SECONDARY_HIGHLIGHT_COLOR}; 
+                overflow: hidden
+            ">
+                <div style="
+                    width: {self.percentage}%; 
+                    height: 100%; 
+                    background-color: rgb{self.HIGHLIGHT_COLOR}; 
+                ">
+                </div>
+            </div>
+            """
 
     def generate_html(self) -> str:
         progress_bar = self._generate_progress_bar_html()
         text = self._generate_text_html()
         description = self._generate_description_html()
-        return (
-            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f'padding-top: {BOARDER}px; padding-bottom: {BOARDER}px">'
-            f"{text}"
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"padding-left: {BOARDER}px; padding-right: {BOARDER}px"
-            f'">{progress_bar}</div>'
-            f"{description}"
-            f"</div></div>"
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px
+            ">
+                <div style="
+                    width: {self.width - BOARDER * 2}px; 
+                    padding-top: {BOARDER}px; 
+                    padding-bottom: {BOARDER}px
+                ">
+                    {text}
+                    <div style="
+                        width: {self.width - BOARDER * 2}px; 
+                        padding-left: {BOARDER}px; 
+                        padding-right: {BOARDER}px
+                    ">
+                        {progress_bar}
+                    </div>
+                    {description}
+                </div>
+            </div>"""
 
 
 class Box(Element):
@@ -703,19 +753,19 @@ class MenuBoxItem(Element):
             + str(hash(self.icon))
         )
 
-    def set_dark(self) -> "MenuBoxItem":
+    def set_dark(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         return self
 
-    def set_light(self) -> "MenuBoxItem":
+    def set_light(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "MenuBoxItem":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
@@ -816,53 +866,67 @@ class MenuBoxItem(Element):
         icon = ImageUtil.paste_to_center(base, icon)
         icon_bytes = BytesIO()
         icon.save(icon_bytes, "PNG")
-        return (
-            f'<img src="data:image/png;base64,'
-            f'{base64.b64encode(icon_bytes.getvalue()).decode()}" '
-            f'style="width: {self.ICON_SIZE}px; height: {self.ICON_SIZE}px">'
-        )
+        return f"""
+            <img 
+                src="data:image/png;base64,{base64.b64encode(icon_bytes.getvalue()).decode()}" 
+                style="
+                    width: {self.ICON_SIZE}px; 
+                    height: {self.ICON_SIZE}px
+                "
+            >
+            """
 
     def _generate_title_html(self) -> str:
         if self.text is None:
             return ""
-        return (
-            f'<div style="font-size: {self.TEXT_SIZE}px; '
-            f"color: rgb{self.TEXT_COLOR}; "
-            f"width: {self.width - self.ICON_SIZE - BOARDER * 3}px; "
-            f"overflow: hidden; "
-            f"text-overflow: ellipsis; "
-            f"white-space: nowrap; "
-            f'">{html_escape(self.text)}</div>'
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER}px; 
+                font-size: {self.TEXT_SIZE}px; 
+                color: rgb{self.TEXT_COLOR}; 
+                width: {self.width - self.ICON_SIZE - BOARDER * 3}px; 
+                word-wrap: break-word
+            ">
+                {html_escape(self.text)}
+            </div>
+            """
 
     def _generate_description_html(self) -> str:
         if self.description is None:
             return ""
-        return (
-            f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
-            f"color: rgb{self.DESCRIPTION_COLOR}; "
-            f"margin-top: {GAP}px; "
-            f"width: {self.width - self.ICON_SIZE - BOARDER * 3}px; "
-            f"overflow: hidden; "
-            f"text-overflow: ellipsis; "
-            f"white-space: nowrap; "
-            f'">{html_escape(self.description)}</div>'
-        )
+        return f"""
+            <div style="
+                font-size: {self.DESCRIPTION_SIZE}px; 
+                padding-bottom: {BOARDER}px;
+                color: rgb{self.DESCRIPTION_COLOR}; 
+                width: {self.width - self.ICON_SIZE - BOARDER * 3}px; 
+                word-wrap: break-word
+            ">
+                {html_escape(self.description)}
+            </div>
+            """
 
     def generate_html(self) -> str:
         icon = self._generate_icon_html()
         title = self._generate_title_html()
         description = self._generate_description_html()
-        return (
-            f'<div style="width: {self.width}px; '
-            f"background-color: rgb{self.FOREGROUND_COLOR}; "
-            f"display: flex; "
-            f"align-items: center; "
-            f"border-radius: {BOARDER}px; "
-            f'"><div style="'
-            f"padding: {BOARDER}px; "
-            f'">{icon}</div><div>{title}{description}</div></div>'
-        )
+        return f"""
+            <div style="
+                width: {self.width}px; 
+                background-color: rgb{self.FOREGROUND_COLOR}; 
+                display: flex; 
+                align-items: center; 
+                border-radius: {BOARDER}px
+            ">
+                <div style="padding: {BOARDER}px">
+                    {icon}
+                </div>
+                <div>
+                    {title}
+                    {description}
+                </div>
+            </div>
+            """
 
 
 class MenuBox(Box):
@@ -927,7 +991,7 @@ class MenuBox(Box):
             )
         )
 
-    def set_dark(self) -> "MenuBox":
+    def set_dark(self) -> Self:
         self.NAME_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
@@ -936,7 +1000,7 @@ class MenuBox(Box):
             item.set_dark()
         return self
 
-    def set_light(self) -> "MenuBox":
+    def set_light(self) -> Self:
         self.NAME_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
@@ -945,13 +1009,13 @@ class MenuBox(Box):
             item.set_light()
         return self
 
-    def set_width(self, width: int) -> "MenuBox":
+    def set_width(self, width: int) -> Self:
         self.width = width
         for item in self.items:
             item.set_width(width)
         return self
 
-    def set_name(self, name: str | None) -> "MenuBox":
+    def set_name(self, name: str | None) -> Self:
         """
         Set the name of the box.
 
@@ -980,7 +1044,7 @@ class MenuBox(Box):
         *,
         element: Element = None,
         sub: bool = True,
-    ) -> "MenuBox":
+    ) -> Self:
         """
         Add an item to the box.
 
@@ -1065,14 +1129,19 @@ class MenuBox(Box):
 
     def _generate_name_html(self) -> str:
         return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"color: rgb{self.NAME_COLOR}; "
-            f"padding-left: {BOARDER}px; "
-            f"overflow: hidden; "
-            f"text-overflow: ellipsis; "
-            f"white-space: nowrap; "
-            f'font-size: {self.NAME_SIZE}px">'
-            f"{html_escape(self.name)}</div>"
+            f"""
+            <div style="
+                width: {self.width - BOARDER * 2}px; 
+                color: rgb{self.NAME_COLOR}; 
+                padding-left: {BOARDER}px; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                white-space: nowrap; 
+                font-size: {self.NAME_SIZE}px
+            ">
+                {html_escape(self.name)}
+            </div>
+            """
             if self.name
             else ""
         )
@@ -1082,21 +1151,31 @@ class MenuBox(Box):
             return ""
         name = self._generate_name_html()
         items = [item.generate_html() for item in self.items]
-        divider = (
-            f'<div style="height: 3px; '
-            f"background-color: rgb{self.LINE_COLOR}; "
-            f"margin-left: {BOARDER * 3 + GAP * 3}px; "
-            f'margin-right: {BOARDER}px;"></div>'
-        )
+        divider = f"""
+            <div style="
+                height: 3px; 
+                background-color: rgb{self.LINE_COLOR}; 
+                margin-left: {BOARDER * 3 + GAP * 3}px; 
+                margin-right: {BOARDER}px
+            ">
+            </div>
+            """
         for i in range(len(items) - 1):
             items[i] += divider
-        return (
-            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
-            f'{name}<div style="width: {self.width}px; '
-            f"background-color: rgb{self.FOREGROUND_COLOR}; "
-            f'border-radius: {BOARDER}px">'
-            f'{"".join(items)}</div></div>'
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px
+            ">
+                {name}
+                <div style="
+                    width: {self.width}px; 
+                    background-color: rgb{self.FOREGROUND_COLOR}; 
+                    border-radius: {BOARDER}px
+                ">
+                    {"".join(items)}
+                </div>
+            </div>"""
 
 
 class GeneralBoxItem(Element):
@@ -1109,7 +1188,7 @@ class GeneralBoxItem(Element):
     SWITCH_DISABLED: tuple[int, int, int]
 
     TEXT_SIZE: int = 35
-    SWITCH_HEIGHT: int = 45
+    SWITCH_WIDTH: int = 75
     DESCRIPTION_SIZE = 25
     UPPER_BOARDER: int = BOARDER // 2
 
@@ -1149,7 +1228,7 @@ class GeneralBoxItem(Element):
     def __hash__(self):
         return hash(str(hash(f"GeneralBoxItem{self.text}{self.description}")))
 
-    def set_dark(self) -> "GeneralBoxItem":
+    def set_dark(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
@@ -1158,7 +1237,7 @@ class GeneralBoxItem(Element):
         self.SWITCH_DISABLED = Color.SWITCH_DISABLE_COLOR_DARK
         return self
 
-    def set_light(self) -> "GeneralBoxItem":
+    def set_light(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
@@ -1167,7 +1246,7 @@ class GeneralBoxItem(Element):
         self.SWITCH_DISABLED = Color.SWITCH_DISABLE_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "GeneralBoxItem":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
@@ -1184,8 +1263,8 @@ class GeneralBoxItem(Element):
                 switch, self.SWITCH_ENABLED if self.switch else self.SWITCH_DISABLED
             )
 
-            switch_width = switch.width * self.SWITCH_HEIGHT // switch.height
-            switch = switch.resize((switch_width, self.SWITCH_HEIGHT))
+            switch_height = switch.height * self.SWITCH_WIDTH // switch.width
+            switch = switch.resize((self.SWITCH_WIDTH, switch_height))
             text_width = self.width - BOARDER * 3 - switch.width
         else:
             text_width = self.width - BOARDER * 2
@@ -1247,33 +1326,52 @@ class GeneralBoxItem(Element):
         switch = IconUtil.replace_color(
             switch, self.SWITCH_ENABLED if self.switch else self.SWITCH_DISABLED
         )
-        switch_width = switch.width * self.SWITCH_HEIGHT // switch.height
-        switch = switch.resize((switch_width, self.SWITCH_HEIGHT))
+        switch_height = switch.height * self.SWITCH_WIDTH // switch.width
+        switch = switch.resize((self.SWITCH_WIDTH, switch_height))
         switch_bytes = BytesIO()
         switch.save(switch_bytes, "PNG")
-        return (
-            f'<div style="'
-            f"border-radius: {self.SWITCH_HEIGHT // 2}px; "
-            f'margin-left: {BOARDER}px">'
-            f'<img src="data:image/png;base64,'
-            f'{base64.b64encode(switch_bytes.getvalue()).decode()}" />'
-            f"</div>"
-        )
+        return f"""
+            <div style="
+                margin-left: {BOARDER}px
+            ">
+                <img src="data:image/png;base64,{base64.b64encode(switch_bytes.getvalue()).decode()}" />
+            </div>
+            """
 
     def _generate_text_html(self) -> str:
+        width = self.width - BOARDER * 2
+        if self.switch is not None:
+            width -= self.SWITCH_WIDTH + BOARDER
         return (
-            f'<div style="font-size: {self.TEXT_SIZE}px; '
-            f'color: rgb{self.TEXT_COLOR}">{html_escape(self.text)}</div>'
+            f"""
+            <div style="
+                width: {width}px;
+                word-wrap: break-word; 
+                font-size: {self.TEXT_SIZE}px; 
+                color: rgb{self.TEXT_COLOR}
+            ">
+                {html_escape(self.text)}
+            </div>
+            """
             if self.text
             else ""
         )
 
     def _generate_description_html(self) -> str:
+        width = self.width - BOARDER * 2
+        if self.switch is not None:
+            width -= self.SWITCH_WIDTH + BOARDER
         return (
-            f'<div style="font-size: {self.DESCRIPTION_SIZE}px; '
-            f"padding-top: {GAP}px; color: rgb"
-            f"{self.HIGHLIGHT_COLOR if self.highlight else self.DESCRIPTION_COLOR}"
-            f'">{html_escape(self.description)}</div>'
+            f"""
+            <div style="
+                width: {width}px;
+                word-wrap: break-word; 
+                font-size: {self.DESCRIPTION_SIZE}px; 
+                color: rgb{self.HIGHLIGHT_COLOR if self.highlight else self.DESCRIPTION_COLOR}
+            ">
+                {html_escape(self.description)}
+            </div>
+            """
             if self.description
             else ""
         )
@@ -1283,17 +1381,29 @@ class GeneralBoxItem(Element):
         text = self._generate_text_html()
         description = self._generate_description_html()
         if text or description:
-            return (
-                f'<div style="width: {self.width}px; '
-                f"background-color: rgb{self.FOREGROUND_COLOR}; "
-                f"display: flex; "
-                f"align-items: center; "
-                f'border-radius: {BOARDER}px">'
-                f'<div style="display: flex; '
-                f"justify-content: space-between; align-items: center; "
-                f'width: {self.width}px; padding: {BOARDER}px">'
-                f"<div>{text}{description}</div>{switch}</div></div>"
-            )
+            return f"""
+                <div style="
+                    width: {self.width}px; 
+                    background-color: rgb{self.FOREGROUND_COLOR}; 
+                    display: flex; 
+                    align-items: center; 
+                    border-radius: {BOARDER}px
+                ">
+                    <div style="
+                        display: flex; 
+                        justify-content: space-between; 
+                        align-items: center; 
+                        width: {self.width}px; 
+                        margin: {BOARDER}px
+                    ">
+                        <div>
+                            {text}
+                            {description}
+                        </div>
+                        {switch}
+                    </div>
+                </div>
+                """
         else:
             return ""
 
@@ -1486,14 +1596,19 @@ class GeneralBox(Box):
 
     def _generate_name_html(self) -> str:
         return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"color: rgb{self.NAME_COLOR}; "
-            f"padding-left: {BOARDER}px; "
-            f"overflow: hidden; "
-            f"text-overflow: ellipsis; "
-            f"white-space: nowrap; "
-            f'font-size: {self.NAME_SIZE}px">'
-            f"{html_escape(self.name)}</div>"
+            f"""
+            <div style="
+                width: {self.width - BOARDER * 2}px; 
+                color: rgb{self.NAME_COLOR}; 
+                padding-left: {BOARDER}px; 
+                overflow: hidden; 
+                text-overflow: ellipsis; 
+                white-space: nowrap; 
+                font-size: {self.NAME_SIZE}px
+            ">
+                {html_escape(self.name)}
+            </div>
+            """
             if self.name
             else ""
         )
@@ -1503,21 +1618,32 @@ class GeneralBox(Box):
             return ""
         name = self._generate_name_html()
         items = [item.generate_html() for item in self.items]
-        divider = (
-            f'<div style="height: 3px; '
-            f"background-color: rgb{self.LINE_COLOR}; "
-            f"margin-left: {BOARDER}px; "
-            f'margin-right: {BOARDER}px;"></div>'
-        )
+        divider = f"""
+            <div style="
+                height: 3px; 
+                background-color: rgb{self.LINE_COLOR}; 
+                margin-left: {BOARDER}px; 
+                margin-right: {BOARDER}px
+            ">
+            </div>
+            """
         for i in range(len(items) - 1):
             items[i] += divider
-        return (
-            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
-            f'{name}<div style="width: {self.width}px; '
-            f"background-color: rgb{self.FOREGROUND_COLOR}; "
-            f'border-radius: {BOARDER}px">'
-            f'{"".join(items)}</div></div>'
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px
+            ">
+                {name}
+                <div style="
+                    width: {self.width}px; 
+                    background-color: rgb{self.FOREGROUND_COLOR}; 
+                    border-radius: {BOARDER}px
+                ">
+                    {"".join(items)}
+                </div>
+            </div>
+            """
 
 
 class HintBox(Box):
@@ -1562,19 +1688,19 @@ class HintBox(Box):
         self.title = title
         self.hints = list(hint)
 
-    def set_dark(self) -> "HintBox":
+    def set_dark(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.FOREGROUND_COLOR = Color.HINT_COLOR_DARK
         self.HIGHLIGHT_COLOR = Color.HIGHLIGHT_COLOR_DARK
         return self
 
-    def set_light(self) -> "HintBox":
+    def set_light(self) -> Self:
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.HINT_COLOR_LIGHT
         self.HIGHLIGHT_COLOR = Color.HIGHLIGHT_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "HintBox":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
@@ -1587,7 +1713,7 @@ class HintBox(Box):
     def has_content(self) -> bool:
         return len(self.hints) + bool(self.title) > 0
 
-    def add(self, *hints: str) -> "HintBox":
+    def add(self, *hints: str) -> Self:
         self.hints.extend(hints)
         return self
 
@@ -1645,37 +1771,54 @@ class HintBox(Box):
 
     def _generate_title_html(self) -> str:
         return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"color: rgb{self.TEXT_COLOR}; "
-            f"padding-bottom: {GAP}px; "
-            f'font-size: {self.TITLE_SIZE}px">'
-            f"{html_escape(self.title)}</div>"
+            f"""
+            <div style="
+                width: {self.width - BOARDER * 2}px; 
+                color: rgb{self.TEXT_COLOR}; 
+                padding-bottom: {GAP}px; 
+                font-size: {self.TITLE_SIZE}px
+            ">
+                {html_escape(self.title)}
+            </div>
+            """
             if self.title
             else ""
         )
 
     def _generate_hint_html(self, hint: str) -> str:
-        return (
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"color: rgb{self.HIGHLIGHT_COLOR}; "
-            f"padding-top: {GAP}px; "
-            f'font-size: {self.TEXT_SIZE}px">'
-            f"{html_escape(hint)}</div>"
-        )
+        return f"""
+            <div style="
+                word-wrap: break-word;
+                width: {self.width - BOARDER * 2}px; 
+                color: rgb{self.HIGHLIGHT_COLOR}; 
+                padding-top: {GAP}px; 
+                font-size: {self.TEXT_SIZE}px
+            ">
+                {html_escape(hint)}
+            </div>
+            """
 
     def generate_html(self) -> str:
         if not self.has_content():
             return ""
         title = self._generate_title_html()
         hints = [self._generate_hint_html(hint) for hint in self.hints]
-        return (
-            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
-            f'<div style="width: {self.width - BOARDER * 2}px; '
-            f"padding: {BOARDER}px; "
-            f"background-color: rgb{self.FOREGROUND_COLOR}; "
-            f'border-radius: {BOARDER}px">'
-            f'{title}{"".join(hints)}</div></div>'
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px
+            ">
+                <div style="
+                    width: {self.width - BOARDER * 2}px; 
+                    padding: {BOARDER}px; 
+                    background-color: rgb{self.FOREGROUND_COLOR}; 
+                    border-radius: {BOARDER}px
+                ">
+                    {title}
+                    {"".join(hints)}
+                </div>
+            </div>
+            """
 
 
 class ImageBox(Box):
@@ -1727,7 +1870,7 @@ class ImageBox(Box):
 
     def add(
         self, *elements: Image.Image | list[Image.Image], index: int = None
-    ) -> "ImageBox":
+    ) -> Self:
         for element in elements:
             if isinstance(element, Image.Image):
                 self.collage[index if index is not None else -1].append(element)
@@ -1751,21 +1894,21 @@ class ImageBox(Box):
     def has_content(self) -> bool:
         return bool(self.extract())
 
-    def set_dark(self) -> "ImageBox":
+    def set_dark(self) -> Self:
         self.LINE_COLOR = Color.LINE_COLOR_DARK
         self.BACKGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         return self
 
-    def set_light(self) -> "ImageBox":
+    def set_light(self) -> Self:
         self.LINE_COLOR = Color.LINE_COLOR_LIGHT
         self.BACKGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "ImageBox":
+    def set_width(self, width: int) -> Self:
         self.width = width
         return self
 
-    def set_collage(self, left: int, right: int | None, index: int = -1) -> "ImageBox":
+    def set_collage(self, left: int, right: int | None, index: int = -1) -> Self:
         """
         Set the collage mode of the box.
 
@@ -1932,17 +2075,24 @@ class ImageBox(Box):
         image_bytes = BytesIO()
         image.save(image_bytes, "JPEG" if image.mode == "RGB" else "PNG")
         image_bytes = image_bytes.getvalue()
-        return (
-            f'<div style="padding-top: {GAP}px; padding-bottom: {GAP}px">'
-            f'<div style="width: {self.width}px; '
-            f'border-radius: {BOARDER}px">'
-            f'<img src="data:image/jpeg;base64,'
-            f'{base64.b64encode(image_bytes).decode()}" '
-            f'width="{self.width}" '
-            f'height="{image.height * self.width // image.width}" '
-            f'style="border-radius: {BOARDER}px" />'
-            f"</div></div>"
-        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px
+            ">
+                <div style="
+                    width: {self.width}px; 
+                    border-radius: {BOARDER}px
+                ">
+                    <img 
+                        src="data:image/jpeg;base64,{base64.b64encode(image_bytes).decode()}" 
+                        width="{self.width}" 
+                        height="{image.height * self.width // image.width}" 
+                        style="border-radius: {BOARDER}px" 
+                    />
+                </div>
+            </div>
+            """
 
 
 class Column(Box):
@@ -1990,21 +2140,21 @@ class Column(Box):
     def has_content(self) -> bool:
         return self.length > 0
 
-    def set_dark(self) -> "Column":
+    def set_dark(self) -> Self:
         for element in self.parts:
             element.set_dark()
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
         return self
 
-    def set_light(self) -> "Column":
+    def set_light(self) -> Self:
         for element in self.parts:
             element.set_light()
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "Column":
+    def set_width(self, width: int) -> Self:
         self.width = width
         for element in self.parts:
             element.set_width(width)
@@ -2012,7 +2162,7 @@ class Column(Box):
 
     def add(
         self, *elements: Element | Image.Image | GraiaImage, dark: bool = None
-    ) -> "Column":
+    ) -> Self:
         """
         Add an element to the column.
 
@@ -2072,12 +2222,16 @@ class Column(Box):
 
     def generate_html(self) -> str:
         return (
-            f'<div style="width: {self.width}px; '
-            f"padding-top: {GAP}px; "
-            f"padding-bottom: {GAP}px; "
-            f'background-color: rgb{self.BACKGROUND_COLOR}">'
-            f"{''.join([part.generate_html() for part in self.parts])}"
-            "</div>"
+            f"""
+            <div style="
+                width: {self.width}px; 
+                padding-top: {BOARDER // 2}px; 
+                padding-bottom: {BOARDER // 2}px; 
+                background-color: rgb{self.BACKGROUND_COLOR}
+            ">
+                {''.join([part.generate_html() for part in self.parts])}
+            </div>
+            """
             if self.parts
             else ""
         )
@@ -2090,14 +2244,31 @@ class OneUIMock:
 
     BACKGROUND_COLOR: tuple[int, int, int]
 
-    GRID_SIZE: int = 36
+    GRID_SIZE: int = BOARDER
 
+    dark: bool
     parts: list[Column]
 
-    def __init__(self, *args: Column, dark: bool = None):
+    include_footer: bool
+    footer_title: str
+    footer_text: str
+    title_at_top: bool
+
+    def __init__(
+        self,
+        *args: Column,
+        dark: bool = None,
+        footer: bool = True,
+        footer_title: str = f"Generated by {config.name}",
+        footer_text: str = f"ver. {__version__}",
+        title_at_top: bool = True,
+    ):
         """
         :param args: The columns to display.
         :param dark: Whether the mockery is dark.
+        :param footer: Whether to include the footer.
+        :param footer_title: The title of the footer.
+        :param footer_text: The text of the footer.
         """
 
         self.parts = []
@@ -2110,8 +2281,25 @@ class OneUIMock:
             self.set_dark()
         else:
             self.set_light()
+        self.include_footer = footer
+        self.footer_title = footer_title
+        self.footer_text = footer_text
+        self.title_at_top = title_at_top
 
-    def add(self, *elements: Element) -> "OneUIMock":
+    def set_footer(
+        self,
+        footer: bool = True,
+        footer_title: str = "",
+        footer_text: str = "",
+        title_at_top: bool = True,
+    ) -> Self:
+        self.include_footer = footer
+        self.footer_title = footer_title
+        self.footer_text = footer_text
+        self.title_at_top = title_at_top
+        return self
+
+    def add(self, *elements: Element) -> Self:
         """
         Add a column to the mockery.
 
@@ -2131,23 +2319,21 @@ class OneUIMock:
                 self.parts.append(element)
         return self
 
-    dark: bool
-
-    def set_dark(self) -> "OneUIMock":
+    def set_dark(self) -> Self:
         for element in self.parts:
             element.set_dark()
         self.dark = True
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         return self
 
-    def set_light(self) -> "OneUIMock":
+    def set_light(self) -> Self:
         for element in self.parts:
             element.set_light()
         self.dark = False
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         return self
 
-    def set_width(self, width: int) -> "OneUIMock":
+    def set_width(self, width: int) -> Self:
         for element in self.parts:
             element.set_width(width)
         return self
@@ -2194,44 +2380,126 @@ class OneUIMock:
     def generate_html(self) -> str:
         if not self.parts:
             return ""
-        columns = [part.generate_html() for part in self.parts]
+        columns = [p for part in self.parts if (p := part.generate_html())]
         width = sum(part.width for part in self.parts)
-        style = (
-            "<style>"
-            "*{margin: 0; "
-            "padding: 0;"
-            "font-family: Helvetica, Arial, sans-serif}"
-            "</style>"
+        style = """
+            <style>
+                * {
+                    margin: 0; 
+                    padding: 0; 
+                    font-family: Helvetica, Arial, sans-serif
+                }
+            </style>
+            """
+        if len(columns) > 1:
+            width += self.GRID_SIZE * (len(columns) + 1) - self.GRID_SIZE
+        footer_color = (
+            Color.FOOTER_COLOR_DARK if self.dark else Color.FOOTER_COLOR_LIGHT
         )
+        footer_padding = BOARDER * (2 if len(columns) > 1 else 1)
+        footer_width = (
+            width - footer_padding * 2 + (self.GRID_SIZE if len(columns) > 1 else 0)
+        )
+        if self.include_footer and any([self.footer_title, self.footer_text]):
+            footer_title = (
+                f"""
+                <p style="
+                    text-align: right;
+                    color: rgb{footer_color};
+                    font-size: 40px;
+                    font-weight: bold;
+                ">
+                    {self.footer_title}
+                </p>
+                """
+                if self.footer_title
+                else ""
+            )
+            footer_text = (
+                f"""
+                <p style="
+                    text-align: right;
+                    color: rgb{footer_color};
+                    font-size: 20px;
+                ">
+                    {self.footer_text}
+                </p>
+                """
+                if self.footer_text
+                else ""
+            )
+            footers = [footer_title, footer_text]
+            if not self.title_at_top:
+                footers.reverse()
+            footer = f"""
+                <div style="
+                    padding-top: 0px; 
+                    padding-left: {footer_padding}px; 
+                    padding-right: {footer_padding}px; 
+                    padding-bottom: {BOARDER}px; 
+                    width: {footer_width}px; 
+                    word-wrap: break-word; 
+                    background-color: rgb{self.BACKGROUND_COLOR}
+                ">
+                    {''.join(footers)}
+                </div>
+                """
+        else:
+            footer = ""
         if len(columns) == 1:
-            return f"<html><head>{style}</head><body>" f"{columns[0]}</body></html>"
+            return f"""
+            <html>
+                <head>
+                    {style}
+                </head>
+                <body>
+                    <div style="background-color: rgb{self.BACKGROUND_COLOR}">
+                        {columns[0]}
+                        {footer}
+                    </div>
+                </body>
+            </html>
+            """
         modified = []
         for column in columns:
-            column = f'<div style="padding-left: {self.GRID_SIZE}px">{column}</div>'
+            column = f"""<div style="padding-left: {self.GRID_SIZE}px">{column}</div>"""
             modified.append(column)
-        width += self.GRID_SIZE * (len(columns) + 1) - self.GRID_SIZE
-        return (
-            f"<html><head>{style}</head><body>"
-            f'<div style="width: {width}px; '
-            f"padding-right: {self.GRID_SIZE}px; "
-            f"display: flex; "
-            f'background-color: rgb{self.BACKGROUND_COLOR}">'
-            f"{''.join(modified)}"
-            "</div></body></html>"
-        )
+        return f"""
+            <html>
+                <head>
+                    {style}
+                </head>
+                <body>
+                    <div>
+                        <div style="
+                            width: {width}px; 
+                            padding-right: {self.GRID_SIZE}px; 
+                            display: flex; 
+                            background-color: rgb{self.BACKGROUND_COLOR}
+                        ">
+                            {''.join(modified)}
+                        </div>
+                        {footer}
+                    </div>
+                </body>
+            </html>
+            """
 
     async def async_render_bytes(self) -> bytes:
-        browser = Ariadne.current().launch_manager.get_interface(PlaywrightBrowser)
-        html = await asyncio.to_thread(self.generate_html)
-        async with browser.page(
-            viewport={"width": self.width, "height": 1},
-            device_scale_factor=1.5,
-        ) as page:
-            await page.set_content(html)
-            img = await page.screenshot(
-                type="jpeg", quality=80, full_page=True, scale="device"
-            )
-            return img
+        try:
+            browser = Ariadne.current().launch_manager.get_interface(PlaywrightBrowser)
+            html = await asyncio.to_thread(self.generate_html)
+            async with browser.page(
+                viewport={"width": self.width, "height": 1},
+                device_scale_factor=1.5,
+            ) as page:
+                await page.set_content(html)
+                img = await page.screenshot(
+                    type="jpeg", quality=80, full_page=True, scale="device"
+                )
+                return img
+        except playwright._impl._api_types.Error:
+            return await asyncio.to_thread(self.render_bytes())
 
     @property
     def width(self) -> int:
