@@ -15,7 +15,7 @@ from graia.scheduler import timers
 from graia.scheduler.saya import SchedulerSchema
 from loguru import logger
 
-from library import PrefixMatch, config
+from library import prefix_match, config
 from library.depend import Blacklist, FunctionCall
 from library.help import HelpMenu
 from library.image.oneui_mock.elements import (
@@ -35,7 +35,7 @@ ICON = PillowImage.open(Path(__file__).parent / "icon.png")
     ListenerSchema(
         listening_events=[GroupMessage],
         inline_dispatchers=[
-            Twilight([PrefixMatch, FullMatch("botlist"), FullMatch("check")])
+            Twilight([prefix_match(), FullMatch("botlist"), FullMatch("check")])
         ],
         decorators=[
             Blacklist.check(),
