@@ -1,5 +1,7 @@
 from datetime import time
 from pathlib import Path
+from typing import Union, Iterable, _SpecialForm
+from typing_extensions import _SpecialForm
 
 from graia.ariadne.message.parser.twilight import UnionMatch, SpacePolicy
 from loguru import logger
@@ -27,5 +29,12 @@ logger.add(
     rotation=time(),
 )
 
-
 PrefixMatch = UnionMatch(*config.func.prefix).space(SpacePolicy.NOSPACE)
+
+
+def prefix_match(
+    optional: bool = False,
+    space: SpacePolicy = SpacePolicy.NOSPACE,
+    *pattern: Union[str, Iterable[str]],
+) -> _SpecialForm | _SpecialForm:
+    return UnionMatch(*(config.func.prefix or pattern), optional=optional).space(space)
