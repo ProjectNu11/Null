@@ -2271,12 +2271,12 @@ class OneUIMock:
         :param footer_text: The text of the footer.
         """
 
-        self.parts = []
-        for element in args:
-            self.add(element)
         if dark is None:
             dark = is_dark()
         self.dark = dark
+        self.parts = []
+        for element in args:
+            self.add(element)
         if dark:
             self.set_dark()
         else:
