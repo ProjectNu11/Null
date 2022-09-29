@@ -18,6 +18,7 @@ aiosqlite = ">=0.17.0"
 numpy = ">=1.23.3"
 typing-extensions = ">=4.3.0"
 kayaku = ">=0.4.0rc2"
+qrcode = "^7.3.1"
 graiax-playwright = "^0.2.0"
 
 [tool.poetry.dev-dependencies]

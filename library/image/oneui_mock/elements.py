@@ -8,6 +8,7 @@ from io import BytesIO
 from typing import Literal
 
 import playwright
+import qrcode
 from PIL import Image
 from PIL.Image import Resampling
 from graia.ariadne import Ariadne
@@ -2093,6 +2094,179 @@ class ImageBox(Box):
                 </div>
             </div>
             """
+
+
+class QRCodeBox(Element):
+    BACKGROUND_COLOR: tuple[int, int, int]
+    TITLE_TEXT_COLOR: tuple[int, int, int]
+    QRCODE_COLOE: tuple[int, int, int]
+
+    data: str
+    width: int
+    size: int
+    title: str | None
+    title_size: int
+
+    def __init__(
+        self,
+        data: str,
+        *,
+        dark: bool = None,
+        title: str = None,
+        title_size: int = 30,
+        width: int = DEFAULT_WIDTH,
+        size: int = 100,
+    ):
+        if dark is None:
+            dark = is_dark()
+        if dark:
+            self.set_dark()
+        else:
+            self.set_light()
+
+        self.data = data
+        self.title = title
+        self.title_size = title_size
+        self.width = width
+        self.size = size
+
+    def __len__(self):
+        return 1 if self.title is None else 2
+
+    def __hash__(self):
+        return hash(self.data)
+
+    def render_qrcode(self) -> Image.Image:
+        qr = qrcode.QRCode(
+            version=1,
+            error_correction=qrcode.constants.ERROR_CORRECT_L,
+            box_size=self.size,
+            border=0,
+        )
+        qr.add_data(self.data)
+        qr.make(fit=True)
+        img = qr.make_image(
+            fill_color=self.QRCODE_COLOE, back_color=self.BACKGROUND_COLOR
+        )
+        return img.resize((self.size, self.size))
+
+    def render(self) -> Image.Image:
+        qr_code = self.render_qrcode()
+        if self.title:
+            title = TextUtil.render_text(
+                text=self.title,
+                color=self.TITLE_TEXT_COLOR,
+                font=TextUtil.get_font(font_size=self.title_size),
+                width=self.width - BOARDER * 2,
+                align="center",
+            )
+        else:
+            title = None
+        canvas = Image.new(
+            "RGBA",
+            (
+                self.width,
+                qr_code.height + BOARDER * 2 + ((title.height + GAP) if title else 0),
+            ),
+            color=self.BACKGROUND_COLOR,
+        )
+        _h = BOARDER
+        if title:
+            canvas.paste(
+                title,
+                (
+                    (canvas.width - title.width) // 2,
+                    _h,
+                ),
+                mask=title,
+            )
+            _h += title.height + GAP
+        canvas.paste(
+            qr_code,
+            (
+                self.width // 2 - qr_code.width // 2,
+                _h,
+            ),
+            mask=qr_code if qr_code.mode == "RGBA" else None,
+        )
+        return ImageUtil.round_corners(canvas, radius=BOARDER)
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        canvas = self.render()
+        output = BytesIO()
+        if jpeg:
+            canvas.convert("RGB").save(output, "JPEG")
+        else:
+            canvas.save(output, "PNG")
+        return output.getvalue()
+
+    def generate_html(self) -> str:
+        if not self.data:
+            return ""
+        qr_code = self.render_qrcode()
+        qr_bytes = BytesIO()
+        qr_code.save(qr_bytes, "JPEG" if qr_code.mode == "RGB" else "PNG")
+        qr_bytes = qr_bytes.getvalue()
+        title = (
+            f"""
+            <p style="
+                text-align: center; 
+                color: rgb{self.TITLE_TEXT_COLOR}; 
+                font-size: {self.title_size}px;
+                word-wrap: break-word; 
+                padding-bottom: {GAP}px
+            ">
+                {self.title}
+            </p>
+        """
+            if self.title
+            else ""
+        )
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px;
+                padding-bottom: {BOARDER // 2}px; 
+            ">
+                <div style="
+                    background-color: rgb{self.BACKGROUND_COLOR};
+                    border-radius: {BOARDER}px;
+                    padding: {BOARDER}px;
+                    display: flex;
+                    align-items: center;
+                    flex-direction: column;
+                ">
+                    {title}
+                    <img
+                        src="data:image/jpeg;base64,{base64.b64encode(qr_bytes).decode()}"
+                        width="{self.size}"
+                        height="{self.size}"
+                    />
+                </div>
+            </div>
+            """
+
+    def set_dark(self) -> Self:
+        self.BACKGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
+        self.TITLE_TEXT_COLOR = Color.DESCRIPTION_COLOR_DARK
+        self.QRCODE_COLOE = Color.TEXT_COLOR_DARK
+        return self
+
+    def set_light(self) -> Self:
+        self.BACKGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
+        self.TITLE_TEXT_COLOR = Color.DESCRIPTION_COLOR_LIGHT
+        self.QRCODE_COLOE = Color.TEXT_COLOR_LIGHT
+        return self
+
+    def set_width(self, width: int) -> Self:
+        self.width = width
+        return self
+
+    def set_content(self, data: str = None, title: str = None) -> Self:
+        if data is not None:
+            self.data = data
+        if title is not None:
+            self.title = title
+        return self
 
 
 class Column(Box):
