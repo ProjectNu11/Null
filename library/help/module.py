@@ -1,3 +1,4 @@
+from loguru import logger
 from typing_extensions import Self
 
 from library import config
@@ -46,6 +47,9 @@ class ModuleHelp:
                         prefix=config.func.prefix[0] if config.func.prefix else ""
                     ),
                 )
+            _switch = switch.get(self.module.pack, field)
+            if _switch is None:
+                _switch = config.func.default
             return OneUIMock(
                 Column(
                     About(
@@ -76,12 +80,7 @@ class ModuleHelp:
                         else "无",
                     )
                     .add("加载状态", switch=self.module.loaded)
-                    .add(
-                        "开关状态",
-                        switch=value
-                        if (value := switch.get(self.module, field)) is not None
-                        else config.func.default,
-                    ),
+                    .add("开关状态", switch=_switch),
                     box,
                     *self.elements,
                 )

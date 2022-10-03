@@ -62,7 +62,9 @@ class Switch:
             group = str(group)
         elif group is None:
             group = "0"
-        if module := self.__switch.get(pack, None):
+        if module := self.__switch.get(
+            pack if isinstance(pack, str) else pack.pack, None
+        ):
             return module.get(group, None)
         return None
 
