@@ -6,7 +6,10 @@
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "category": "essential",
+    "category": [
+        "essential",
+        "utility"
+    ],
     "description": "管理插件的安装、卸载、开关",
     "dependency": [
         "module.hub_service"
@@ -14,5 +17,13 @@
     "loaded": true,
     "hidden": false,
     "override_default": true,
-    "override_switch": true
+    "override_switch": true,
+    "help": {
+        "开启插件": "发送 \"插件打开 插件名\"，需要管理员权限",
+        "关闭插件": "发送 \"插件关闭 插件名\"，需要管理员权限",
+        "安装插件": "发送 \"插件安装 插件名\"，需要所有人权限",
+        "卸载插件": "发送 \"插件卸载 插件名\"，需要所有人权限",
+        "加载插件": "发送 \"插件加载 插件名\"，需要所有人权限",
+        "重载插件": "发送 \"插件重载 插件名\"，需要所有人权限"
+    }
 }

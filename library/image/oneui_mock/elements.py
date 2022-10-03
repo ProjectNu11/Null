@@ -947,6 +947,7 @@ class MenuBox(Box):
     width: int
     items: list[MenuBoxItem | Element]
     name: str | None
+    divider: bool
 
     def __init__(
         self,
@@ -958,6 +959,7 @@ class MenuBox(Box):
         width: int = DEFAULT_WIDTH,
         dark: bool = None,
         name: str | None = None,
+        divider: bool = True,
     ):
         """
         :param text: Text to display
@@ -979,6 +981,7 @@ class MenuBox(Box):
 
         self.width = width
         self.name = name
+        self.divider = divider
         if name is None and description is None:
             return
         self.items.append(
@@ -1152,7 +1155,8 @@ class MenuBox(Box):
             return ""
         name = self._generate_name_html()
         items = [item.generate_html() for item in self.items]
-        divider = f"""
+        divider = (
+            f"""
             <div style="
                 height: 3px; 
                 background-color: rgb{self.LINE_COLOR}; 
@@ -1161,6 +1165,9 @@ class MenuBox(Box):
             ">
             </div>
             """
+            if self.divider
+            else ""
+        )
         for i in range(len(items) - 1):
             items[i] += divider
         return f"""
@@ -1425,6 +1432,7 @@ class GeneralBox(Box):
     width: int
     items: list[GeneralBoxItem | Element]
     name: str | None
+    divider: bool
 
     def __init__(
         self,
@@ -1436,6 +1444,7 @@ class GeneralBox(Box):
         name: str = None,
         width: int = DEFAULT_WIDTH,
         dark: bool = None,
+        divider: bool = True,
     ):
         """
         :param text: Text to display
@@ -1455,6 +1464,7 @@ class GeneralBox(Box):
             self.set_light()
         self.width = width
         self.name = name
+        self.divider = divider
         if text or description:
             self.items.append(
                 GeneralBoxItem(
@@ -1619,7 +1629,8 @@ class GeneralBox(Box):
             return ""
         name = self._generate_name_html()
         items = [item.generate_html() for item in self.items]
-        divider = f"""
+        divider = (
+            f"""
             <div style="
                 height: 3px; 
                 background-color: rgb{self.LINE_COLOR}; 
@@ -1628,6 +1639,9 @@ class GeneralBox(Box):
             ">
             </div>
             """
+            if self.divider
+            else ""
+        )
         for i in range(len(items) - 1):
             items[i] += divider
         return f"""
@@ -2266,6 +2280,214 @@ class QRCodeBox(Element):
             self.data = data
         if title is not None:
             self.title = title
+        return self
+
+
+class About(Element):
+    width: int
+
+    BACKGROUND_COLOR: tuple[int, int, int]
+    FOREGROUND_COLOR: tuple[int, int, int]
+
+    TEXT_COLOR: tuple[int, int, int]
+    DESCRIPTION_COLOR: tuple[int, int, int]
+
+    TEXT_SIZE: int = 50
+    DESCRIPTION_SIZE: int = 25
+    BUTTON_TEXT_SIZE: int = 30
+
+    title: str
+    description: list[str]
+    buttons: list[str]
+
+    def __init__(
+        self,
+        title: str,
+        description: list[str] = None,
+        buttons: list[str] = None,
+        *,
+        dark: bool = None,
+        width: int = DEFAULT_WIDTH,
+    ):
+        if dark is None:
+            dark = is_dark()
+        if dark:
+            self.set_dark()
+        else:
+            self.set_light()
+        self.title = title
+        self.description = description or []
+        self.buttons = buttons or []
+        self.width = width
+
+    def __len__(self) -> int:
+        return 1 + len(self.buttons)
+
+    def __hash__(self) -> int:
+        return hash("_AboutPage" + "".join(self.buttons))
+
+    def render(self) -> Image.Image:
+        pass
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        pass
+
+    def set_dark(self) -> Self:
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
+        self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
+        self.TEXT_COLOR = Color.TEXT_COLOR_DARK
+        self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_DARK
+        return self
+
+    def set_light(self) -> Self:
+        self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
+        self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
+        self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
+        self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_LIGHT
+        return self
+
+    def set_width(self, width: int) -> Self:
+        self.width = width
+        return self
+
+    def set_title(self, title: str) -> Self:
+        self.title = title
+        return self
+
+    def add_description(self, description: str) -> Self:
+        self.description.append(description)
+        return self
+
+    def add_button(self, text: str) -> Self:
+        self.buttons.append(text)
+        return self
+
+    def _generate_button(self) -> str:
+        if not self.buttons:
+            return ""
+        buttons = [
+            f"""
+            <p style="
+                min-width: {self.width // 3}px;
+                max-width: {self.width * 2 // 3}px;
+                padding-top: {BOARDER // 2}px;
+                padding-bottom: {BOARDER // 2}px;
+                padding-left: {BOARDER}px;
+                padding-right: {BOARDER}px;
+                background-color: rgb{self.FOREGROUND_COLOR};
+                border-radius: {BOARDER}px; 
+                color: rgb{self.TEXT_COLOR}; 
+                font-size: {self.BUTTON_TEXT_SIZE}px;
+                text-align: center; 
+                word-wrap: break-word
+            ">
+                    {html_escape(button)}
+            </p>
+            """
+            for button in self.buttons
+        ]
+        return "".join(
+            [
+                f"""
+                <div style="
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    padding-top: {GAP}px;
+                    padding-bottom: {GAP}px;
+                    padding-left: {BOARDER}px;
+                    padding-right: {BOARDER}px;
+                ">
+                    {button}
+                </div>
+                """
+                for button in buttons
+            ]
+        )
+
+    def _generate_description(self) -> str:
+        return (
+            "".join(
+                [
+                    f"""
+                    <p style="
+                        padding-top: {GAP}px;
+                        padding-left: {BOARDER}px;
+                        padding-right: {BOARDER}px; 
+                        color: rgb{self.DESCRIPTION_COLOR}; 
+                        font-size: {self.DESCRIPTION_SIZE}px;
+                        text-align: center; 
+                        word-wrap: break-word
+                    ">
+                        {html_escape(description)}
+                    </p>
+                    """
+                    for description in self.description
+                ]
+            )
+            if self.description
+            else ""
+        )
+
+    def generate_html(self) -> str:
+        buttons = self._generate_button()
+        description = self._generate_description()
+        return f"""
+            <div style="
+                padding-top: {BOARDER // 2}px;
+                padding-bottom: {BOARDER // 2}px; 
+            ">
+                <p style="
+                    padding-top: {BOARDER * 3}px; 
+                    padding-bottom: {GAP}px;
+                    padding-left: {BOARDER}px;
+                    padding-right: {BOARDER}px;
+                    color: rgb{self.TEXT_COLOR};
+                    font-size: {self.TEXT_SIZE}px;
+                    text-align: center;
+                    word-wrap: break-word
+                ">
+                    {html_escape(self.title)}
+                </p>
+                {description}
+                <div style="padding-top: {BOARDER}px"/>
+                {buttons}
+            </div>
+        """
+
+
+class Spacing(Element):
+    height: int
+
+    def __init__(self, height: int = BOARDER):
+        self.height = height
+
+    def __len__(self) -> int:
+        return 1
+
+    def __hash__(self) -> int:
+        return hash(f"_Spacing{self.height}")
+
+    def render(self) -> Image.Image:
+        pass
+
+    def render_bytes(self, jpeg: bool = True) -> bytes:
+        pass
+
+    def generate_html(self) -> str:
+        return f"""<div style="padding-top: {self.height}px"/>"""
+
+    def set_dark(self):
+        pass
+
+    def set_light(self):
+        pass
+
+    def set_width(self, width: int):
+        pass
+
+    def set_height(self, height: int) -> Self:
+        self.height = height
         return self
 
 
