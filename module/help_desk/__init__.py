@@ -167,6 +167,7 @@ async def get_avatar(app: Ariadne) -> PillowImage.Image:
     return avatar_img
 
 
+HelpMenu.register_box(HintBox('您可发送 ".help 插件名" 取得插件的详细帮助'))
 HelpMenu.register_box(
     HintBox(
         "本项目开源于以下 Github 仓库",

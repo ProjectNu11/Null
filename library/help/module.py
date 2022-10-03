@@ -40,7 +40,12 @@ class ModuleHelp:
         def generate_mock(self, field: int = 0) -> OneUIMock:
             box = GeneralBox(divider=False)
             for title, content in self.module.help.items():
-                box.add(title, content)
+                box.add(
+                    title,
+                    content.format(
+                        prefix=config.func.prefix[0] if config.func.prefix else ""
+                    ),
+                )
             return OneUIMock(
                 Column(
                     About(

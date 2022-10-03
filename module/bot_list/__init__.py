@@ -52,11 +52,7 @@ async def botlist_check(app: Ariadne, event: GroupMessage):
         await app.send_group_message(
             event.sender.group,
             MessageChain(
-                Image(
-                    data_bytes=await asyncio.to_thread(
-                        generate_bot_summary, event.sender.group, *bots
-                    )
-                )
+                Image(data_bytes=await generate_bot_summary(event.sender.group, *bots))
             ),
         )
         if (bots := bot_list.bulk_check(*members))
@@ -66,7 +62,7 @@ async def botlist_check(app: Ariadne, event: GroupMessage):
     )
 
 
-def generate_bot_summary(group: Group, *bots: Bot) -> bytes:
+async def generate_bot_summary(group: Group, *bots: Bot) -> bytes:
     columns = [
         Column(
             Banner("机器人名单", icon=ICON),
@@ -83,7 +79,7 @@ def generate_bot_summary(group: Group, *bots: Bot) -> bytes:
             GeneralBox(f"{bot.name}#{bot.num}", bot.kind.name)
         )
 
-    return OneUIMock(*columns).render_bytes()
+    return await OneUIMock(*columns).async_render_bytes()
 
 
 @channel.use(SchedulerSchema(timer=timers.every_custom_hours(24)))
