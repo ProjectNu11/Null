@@ -1,6 +1,4 @@
 import asyncio
-import pickle
-from hashlib import md5
 from io import BytesIO
 from pathlib import Path
 
@@ -13,23 +11,25 @@ from graia.ariadne.message.element import Image, At
 from graia.ariadne.message.parser.twilight import (
     Twilight,
     SpacePolicy,
-    ArgumentMatch,
     ArgResult,
     UnionMatch,
     ElementMatch,
+    WildcardMatch,
 )
 from graia.saya import Channel
 from graia.saya.builtins.broadcast import ListenerSchema
 from graiax.playwright import PlaywrightBrowser
-from loguru import logger
-from pydantic import BaseModel
 
-from library import config, PrefixMatch
-from library.depend import Permission, Blacklist, FunctionCall, Switch
-from library.help import HelpMenu, Disclaimer
-from library.image.oneui_mock.elements import is_dark, HintBox
-from library.model import UserPerm
-from library.util.switch import switch
+from library import config, prefix_match
+from library.depend import Blacklist, FunctionCall, Switch
+from library.help import HelpMenu, Disclaimer, module_help
+from library.image.oneui_mock.elements import (
+    HintBox,
+    OneUIMock,
+    Column,
+    Banner,
+    GeneralBox,
+)
 from module import modules
 
 channel = Channel.current()
@@ -51,8 +51,7 @@ avatar_img: PillowImage.Image | None = None
                         *config.func.prefix, ".", "/", "?", "#", "。", "？", optional=True
                     ).space(SpacePolicy.NOSPACE),
                     UnionMatch("help", "帮助", "菜单"),
-                    ArgumentMatch("-i", "--invalidate", action="store_true")
-                    @ "invalidate",
+                    WildcardMatch() @ "module",
                 ]
             )
         ],
@@ -63,21 +62,48 @@ avatar_img: PillowImage.Image | None = None
         ],
     )
 )
-async def help_menu(app: Ariadne, event: MessageEvent, invalidate: ArgResult):
-    if invalidate.result:
-        if not Permission.permission_check(UserPerm.BOT_OWNER, event):
-            return
+async def help_menu(app: Ariadne, event: MessageEvent, module: ArgResult):
+    if not module.matched or not (module := module.result.display):
+        await get_avatar(app)
+        field = event.sender.group.id if isinstance(event, GroupMessage) else 0
+        menu = await get_help(app, field)
         return await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender,
-            MessageChain(f"已清空 {one_ui_help_menu.invalidate()} 个群组的缓存"),
+            MessageChain(Image(data_bytes=menu)),
         )
-    await get_avatar(app)
-    field = event.sender.group.id if isinstance(event, GroupMessage) else 0
-    # menu = await one_ui_help_menu.get(field, app)
-    menu = await get_help(app, field)
-    await app.send_message(
+    module = module.strip().lower().replace(" ", "_").replace("-", "_")
+    if not (result := modules.search(match_any=True, name=module, pack=module)):
+        return await app.send_message(
+            event.sender.group if isinstance(event, GroupMessage) else event.sender,
+            MessageChain(
+                Image(
+                    data_bytes=await OneUIMock(
+                        Column(
+                            Banner(
+                                "帮助菜单",
+                                icon=PillowImage.open(
+                                    Path(__file__).parent / "icon.png"
+                                ),
+                            ),
+                            GeneralBox(f"无法找到模块 {module}"),
+                            HintBox("可以尝试以下解决方案", "检查模块名是否正确", "检查模块是否已正确安装"),
+                        )
+                    ).async_render_bytes()
+                )
+            ),
+        )
+    result = result[0]
+    return await app.send_message(
         event.sender.group if isinstance(event, GroupMessage) else event.sender,
-        MessageChain([Image(data_bytes=menu)]),
+        MessageChain(
+            Image(
+                data_bytes=await module_help(result).render(
+                    field=event.sender.group.id
+                    if isinstance(event, GroupMessage)
+                    else 0
+                )
+            )
+        ),
     )
 
 
@@ -101,7 +127,7 @@ async def get_help(app: Ariadne, field: int) -> bytes:
         inline_dispatchers=[
             Twilight(
                 [
-                    PrefixMatch,
+                    prefix_match(),
                     UnionMatch("disclaimer", "免责声明"),
                 ]
             )
@@ -140,104 +166,6 @@ async def get_avatar(app: Ariadne) -> PillowImage.Image:
         avatar_img = PillowImage.open(avatar)
     return avatar_img
 
-
-class GroupCache(BaseModel):
-    id: int
-    light: bytes | None = None
-    light_hash: str | None = None
-    dark: bytes | None = None
-    dark_hash: str | None = None
-
-    def generate_hash(self) -> str:
-        data: dict[str, int] = {}
-        for module in modules:
-            offset = 0
-            if not module.loaded:
-                offset = 2
-            if (status := switch.get(module.pack, self.id)) is None:
-                status = config.func.default
-            status = int(status) + offset
-            data[module.pack] = status
-        return md5(pickle.dumps(data)).hexdigest()
-
-    def compare_hash(self, dark: bool) -> bool:
-        if dark:
-            return self.dark_hash == self.generate_hash()
-        return self.light_hash == self.generate_hash()
-
-    def update_hash(self, dark: bool) -> None:
-        if dark:
-            self.dark_hash = self.generate_hash()
-        else:
-            self.light_hash = self.generate_hash()
-
-    async def cache(self, dark: bool = False) -> None:
-        menu = HelpMenu(self.id, avatar_img, dark=dark)
-        menu_image = await menu.async_compose()
-        self.update_hash(dark)
-        output = BytesIO()
-        menu_image.convert("RGB").save(output, format="JPEG")
-        if dark:
-            self.dark = output.getvalue()
-            return
-        self.light = output.getvalue()
-
-    def invalidate(self) -> None:
-        self.light = None
-        self.light_hash = None
-        self.dark = None
-        self.dark_hash = None
-
-    async def get(self, dark: bool, app: Ariadne):
-        if self.compare_hash(dark):
-            return self.dark if dark else self.light
-        if self.id != 0:
-            await app.send_group_message(self.id, MessageChain("正在更新缓存..."))
-        await self.cache(dark)
-        one_ui_help_menu.save_pickle()
-        return self.dark if dark else self.light
-
-
-class OneUIHelpMenu:
-    __cached_menu: dict[int, GroupCache] = {}
-
-    def __init__(self):
-        self.load_pickle()
-
-    async def get(self, group: int, app: Ariadne):
-        dark = is_dark()
-        if group not in self.__cached_menu:
-            self.__cached_menu[group] = GroupCache(id=group)
-        return await self.__cached_menu[group].get(dark=dark, app=app)
-
-    def invalidate(self) -> int:
-        for _, cache in self.__cached_menu.items():
-            cache.invalidate()
-        self.save_pickle()
-        return len(self.__cached_menu)
-
-    def save_pickle(self):
-        with Path(data_path, "cache.pickle").open("wb") as f:
-            f.write(pickle.dumps(self.__cached_menu))
-
-    def load_pickle(self):
-        pickle_path = Path(data_path, "cache.pickle")
-        if not pickle_path.is_file():
-            self.__cached_menu = {}
-            self.save_pickle()
-            return
-        try:
-            with pickle_path.open("rb") as f:
-                self.__cached_menu = pickle.load(f)
-        except EOFError:
-            logger.error(
-                f"Failed to load help cache from pickle file at {pickle_path}, resetting..."
-            )
-            pickle_path.unlink(missing_ok=True)
-            self.__init__()
-
-
-one_ui_help_menu = OneUIHelpMenu()
 
 HelpMenu.register_box(
     HintBox(

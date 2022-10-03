@@ -6,11 +6,18 @@
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "category": "utility",
+    "category": [
+        "essential",
+        "utility"
+    ],
     "description": "生成帮助菜单及免责声明",
     "dependency": null,
     "loaded": true,
     "hidden": false,
     "override_default": true,
-    "override_switch": true
+    "override_switch": true,
+    "help": {
+        "查看插件列表": "发送 \"帮助\" 或 \"菜单\"",
+        "查看插件帮助": "发送 \"帮助 插件名\""
+    }
 }

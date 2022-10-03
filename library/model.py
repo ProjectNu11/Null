@@ -348,24 +348,19 @@ class Module(BaseModel):
     version: str = "Unknown"
     author: list[str] = ["Unknown"]
     pypi: bool = False
-    category: str = "miscellaneous"
+    category: list[str] = ["miscellaneous"]
     description: str = ""
     dependency: list[str] = None
     loaded: bool = True
     hidden: bool = False
     override_default: None | bool = None
     override_switch: None | bool = None
+    help: dict[str, str] = {}
 
     @validator("category", pre=True)
-    def category_validator(cls, category: str):
-        if category.startswith("uti"):
-            category = "utility"
-        elif category.startswith("ent"):
-            category = "entertainment"
-        elif category.startswith("dep"):
-            category = "dependency"
-        elif category.startswith("mis"):
-            category = "miscellaneous"
+    def category_validator(cls, category):
+        if isinstance(category, str):
+            category = [category]
         return category
 
     def __str__(self):
@@ -388,4 +383,4 @@ class Module(BaseModel):
         )
 
     def __hash__(self):
-        return hash(self.name)
+        return hash(self.pack)

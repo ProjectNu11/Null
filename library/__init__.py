@@ -1,6 +1,6 @@
 from datetime import time
 from pathlib import Path
-from typing import Union, Iterable, _SpecialForm
+from typing import Union, Iterable
 from typing_extensions import _SpecialForm
 
 from graia.ariadne.message.parser.twilight import UnionMatch, SpacePolicy

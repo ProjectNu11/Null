@@ -15,6 +15,15 @@ from library.model import Module
 from library.util.dependency import install_dependency
 
 
+category_locale: dict[str, str] = {
+    "essential": "必备",
+    "utility": "实用工具",
+    "entertainment": "娱乐",
+    "miscellaneous": "杂项",
+    "other": "其他",
+}
+
+
 class Modules:
     """
     Modules class contains a list of modules.
@@ -359,7 +368,9 @@ class Modules:
             lambda x: any(
                 [
                     name.lower() == x.name.lower(),
-                    name.lower() == x.name.lower().split(".", maxsplit=1)[-1],
+                    name.lower() == x.pack.lower().split(".", maxsplit=1)[-1],
+                    name.lower()
+                    == x.name.lower().replace(" ", "").split(".", maxsplit=1)[-1],
                 ]
             ),
             field,
@@ -379,6 +390,8 @@ class Modules:
                 [
                     pack.lower() == x.pack.lower(),
                     pack.lower() == x.pack.lower().split(".", maxsplit=1)[-1],
+                    pack.lower()
+                    == x.name.lower().replace(" ", "").split(".", maxsplit=1)[-1],
                 ]
             ),
             field,
