@@ -487,7 +487,10 @@ class Modules:
         :return: List of categories.
         """
 
-        return sorted(list({module.category for module in self.__all__}))
+        categories = []
+        for module in self.__all__:
+            categories.extend(module.category)
+        return sorted(list(set(categories)))
 
 
 class ModuleMetadata:

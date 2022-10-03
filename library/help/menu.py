@@ -96,7 +96,7 @@ class HelpMenu:
             boxes[status][box_index].add(
                 module.name, module.description or None, icon, COLOR_PALETTE[status]
             )
-            boxes[status][box_index].set_name(module.category.title())
+            boxes[status][box_index].set_name(module.category[0].title())
 
         box_list = [*boxes[0], *boxes[1], *boxes[2], *boxes[3]]
         return [box for box in box_list if box.has_content()]
