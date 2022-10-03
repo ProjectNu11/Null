@@ -94,7 +94,7 @@ class HelpMenu:
             status = self.__get_switch(module.pack, self.field)
             status = int(status) + offset
             boxes[status][box_index].add(
-                module.name, module.description or None, icon, COLOR_PALETTE[status]
+                module.name, module.description or "暂无描述", icon, COLOR_PALETTE[status]
             )
             boxes[status][box_index].set_name(module.category[0].title())
 
