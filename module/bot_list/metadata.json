@@ -6,11 +6,16 @@
         "nullqwertyuiop"
     ],
     "pypi": false,
-    "category": "essential",
+    "category": [
+        "essential"
+    ],
     "description": "搜索当前聊天区域所有已注册的机器人",
     "dependency": null,
     "loaded": true,
     "hidden": false,
     "override_default": true,
-    "override_switch": true
+    "override_switch": true,
+    "help": {
+        "使用方法": "发送 \"{prefix}botlist check\" 即可"
+    }
 }
