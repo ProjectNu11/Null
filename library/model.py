@@ -361,6 +361,8 @@ class Module(BaseModel):
     def category_validator(cls, category):
         if isinstance(category, str):
             category = [category]
+        if not category:
+            category = ["miscellaneous"]
         return category
 
     def __str__(self):
