@@ -2288,6 +2288,7 @@ class About(Element):
 
     BACKGROUND_COLOR: tuple[int, int, int]
     FOREGROUND_COLOR: tuple[int, int, int]
+    BUTTON_COLOR: tuple[int, int, int]
 
     TEXT_COLOR: tuple[int, int, int]
     DESCRIPTION_COLOR: tuple[int, int, int]
@@ -2335,6 +2336,7 @@ class About(Element):
     def set_dark(self) -> Self:
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_DARK
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_DARK
+        self.BUTTON_COLOR = Color.SECONDARY_HIGHLIGHT_COLOR_DARK
         self.TEXT_COLOR = Color.TEXT_COLOR_DARK
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_DARK
         return self
@@ -2342,6 +2344,7 @@ class About(Element):
     def set_light(self) -> Self:
         self.BACKGROUND_COLOR = Color.BACKGROUND_COLOR_LIGHT
         self.FOREGROUND_COLOR = Color.FOREGROUND_COLOR_LIGHT
+        self.BUTTON_COLOR = Color.SECONDARY_HIGHLIGHT_COLOR_LIGHT
         self.TEXT_COLOR = Color.TEXT_COLOR_LIGHT
         self.DESCRIPTION_COLOR = Color.DESCRIPTION_COLOR_LIGHT
         return self
@@ -2374,7 +2377,7 @@ class About(Element):
                 padding-bottom: {BOARDER // 2}px;
                 padding-left: {BOARDER}px;
                 padding-right: {BOARDER}px;
-                background-color: rgb{self.FOREGROUND_COLOR};
+                background-color: rgb{self.BUTTON_COLOR};
                 border-radius: {BOARDER}px; 
                 color: rgb{self.TEXT_COLOR}; 
                 font-size: {self.BUTTON_TEXT_SIZE}px;
