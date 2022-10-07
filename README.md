@@ -11,7 +11,9 @@ _Another modular bot_
 
 </div>
 
-本项目仍处于开发阶段，暂不建议部署。
+~~本项目仍处于开发阶段，暂不建议部署。~~
+
+Discontinued due to bad mental health.
 
 ## 目录
   * [目录](#目录)

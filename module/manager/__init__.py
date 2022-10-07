@@ -51,40 +51,40 @@ channel.description("")
                 [
                     UnionMatch(".plugin", "插件").help('以 ".plugin" 或 "插件" 开头'),
                     UnionMatch(
-                        "install",
-                        "uninstall",
+                        # "install",
+                        # "uninstall",
                         "load",
                         "reload",
                         "unload",
-                        "search",
-                        "upgrade",
-                        "安装",
-                        "删除",
+                        # "search",
+                        # "upgrade",
+                        # "安装",
+                        # "删除",
                         "加载",
                         "重载",
                         "卸载",
-                        "搜索",
-                        "升级",
-                    ).help(
-                        '功能可选择 "install" "安装" '
-                        '"uninstall" "删除" "load" "加载" '
-                        '"reload" "重载" "unload" "卸载"'
-                        '"search" "搜索" "upgrade" "升级"'
+                        # "搜索",
+                        # "升级",
+                        # ).help(
+                        #     '功能可选择 "install" "安装" '
+                        #     '"uninstall" "删除" "load" "加载" '
+                        #     '"reload" "重载" "unload" "卸载"'
+                        #     '"search" "搜索" "upgrade" "升级"'
                     )
                     @ "function",
-                    ArgumentMatch(
-                        "-u", "--upgrade", action="store_true", optional=True
-                    ).help("升级插件，安装插件时可选")
-                    @ "upgrade",
-                    ArgumentMatch(
-                        "-f", "--force", action="store_true", optional=True
-                    ).help("强制模式，安装或升级插件时可选")
-                    @ "force",
+                    # ArgumentMatch(
+                    #     "-u", "--upgrade", action="store_true", optional=True
+                    # ).help("升级插件，安装插件时可选")
+                    # @ "upgrade",
+                    # ArgumentMatch(
+                    #     "-f", "--force", action="store_true", optional=True
+                    # ).help("强制模式，安装或升级插件时可选")
+                    # @ "force",
                     WildcardMatch(optional=True) @ "name",
-                    ArgumentMatch("-c", "--category", optional=True).help("搜索的插件类别")
-                    @ "category",
-                    ArgumentMatch("-a", "--author", optional=True).help("搜索的插件作者")
-                    @ "author",
+                    # ArgumentMatch("-c", "--category", optional=True).help("搜索的插件类别")
+                    # @ "category",
+                    # ArgumentMatch("-a", "--author", optional=True).help("搜索的插件作者")
+                    # @ "author",
                 ]
             )
         ],
@@ -100,44 +100,44 @@ async def module_manager_owner(
     app: Ariadne,
     event: MessageEvent,
     function: MatchResult,
-    upgrade: MatchResult,
-    force: MatchResult,
+    # upgrade: MatchResult,
+    # force: MatchResult,
     name: ArgResult,
-    category: ArgResult,
-    author: ArgResult,
+    # category: ArgResult,
+    # author: ArgResult,
 ):
     function: str = function.result.display
-    if not hs and function in {"install", "search", "upgrade", "安装", "搜索", "升级"}:
-        return await app.send_message(
-            event.sender.group if isinstance(event, GroupMessage) else event.sender,
-            MessageChain(f"HubService 未启用，无法使用 {function}"),
-        )
-    upgrade: bool = upgrade.matched
-    force: bool = force.matched
-    name: Union[List[str], str] = str(name.result) if name.matched else ""
-    category: str = str(category.result) if category.matched else ""
-    author: str = str(author.result) if author.matched else ""
+    # if not hs and function in {"install", "search", "upgrade", "安装", "搜索", "升级"}:
+    #     return await app.send_message(
+    #         event.sender.group if isinstance(event, GroupMessage) else event.sender,
+    #         MessageChain(f"HubService 未启用，无法使用 {function}"),
+    #     )
+    # upgrade: bool = upgrade.matched
+    # force: bool = force.matched
+    # name: Union[List[str], str] = str(name.result) if name.matched else ""
+    # category: str = str(category.result) if category.matched else ""
+    # author: str = str(author.result) if author.matched else ""
     msg = None
-    if function in {"search", "搜索"}:
-        msg = await search(name=name, category=category, author=author)
-    elif function in {"install", "安装"}:
-        name = name.split()
-        for mod_name in name:
-            await app.send_message(
-                event.sender.group if isinstance(event, GroupMessage) else event.sender,
-                await install_module(name=mod_name, upgrade=upgrade, version=""),
-            )
-        return
-    elif function in {"load", "加载"}:
+    # if function in {"search", "搜索"}:
+    #     msg = await search(name=name, category=category, author=author)
+    # elif function in {"install", "安装"}:
+    #     name = name.split()
+    #     for mod_name in name:
+    #         await app.send_message(
+    #             event.sender.group if isinstance(event, GroupMessage) else event.sender,
+    #             await install_module(name=mod_name, upgrade=upgrade, version=""),
+    #         )
+    #     return
+    if function in {"load", "加载"}:
         msg = await load_module(name=name)
     elif function in {"reload", "重载"}:
         msg = await reload_module(name=name)
     elif function in {"unload", "卸载"}:
         msg = await unload_module(name=name)
-    elif function in {"uninstall", "删除"}:
-        pass
-    elif function in {"upgrade", "升级"}:
-        msg = await upgrade_module(force)
+    # elif function in {"uninstall", "删除"}:
+    #     pass
+    # elif function in {"upgrade", "升级"}:
+    #     msg = await upgrade_module(force)
     if msg:
         await app.send_message(
             event.sender.group if isinstance(event, GroupMessage) else event.sender, msg
